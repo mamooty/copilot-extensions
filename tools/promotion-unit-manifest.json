@@ -5159,7 +5159,22 @@
         "tools/promotion_unit_tests/test_source_objects.py::test_promoted_source_binds_frozen_identity_before_content_read[parent]",
         "tools/promotion_unit_tests/test_source_objects.py::test_promoted_source_binds_frozen_identity_before_content_read[release]",
         "tools/promotion_unit_tests/test_source_objects.py::test_promoted_source_binds_frozen_identity_before_content_read[tag]",
-        "tools/promotion_unit_tests/test_source_objects.py::test_promoted_source_binds_frozen_identity_before_content_read[duplicate]"
+        "tools/promotion_unit_tests/test_source_objects.py::test_promoted_source_binds_frozen_identity_before_content_read[duplicate]",
+        "tools/promotion_unit_tests/test_typecheck_catalog.py::test_bootstrap_view_preserves_real_program_transport_and_floor",
+        "tools/promotion_unit_tests/test_typecheck_catalog.py::test_bootstrap_wrong_assignment_is_actual_mapped_source",
+        "tools/promotion_unit_tests/test_typecheck_catalog.py::test_bootstrap_canonical_source_does_not_read_dev_mirrors[False]",
+        "tools/promotion_unit_tests/test_typecheck_catalog.py::test_bootstrap_canonical_source_does_not_read_dev_mirrors[True]",
+        "tools/promotion_unit_tests/test_typecheck_catalog.py::test_bootstrap_canonical_source_refuses_changed_launch",
+        "tools/promotion_unit_tests/test_typecheck_catalog.py::test_bootstrap_strict_floor_refuses_before_sdk",
+        "tools/promotion_unit_tests/test_typecheck_catalog.py::test_bootstrap_refuses_unreviewed_composition[conversion]",
+        "tools/promotion_unit_tests/test_typecheck_catalog.py::test_bootstrap_refuses_unreviewed_composition[format]",
+        "tools/promotion_unit_tests/test_typecheck_catalog.py::test_bootstrap_refuses_unreviewed_composition[unknown-slot]",
+        "tools/promotion_unit_tests/test_typecheck_catalog.py::test_bootstrap_refuses_unreviewed_composition[quote]",
+        "tools/promotion_unit_tests/test_typecheck_catalog.py::test_bootstrap_refuses_unreviewed_composition[launch]",
+        "tools/promotion_unit_tests/test_typecheck_catalog.py::test_bootstrap_refuses_unreviewed_composition[helper]",
+        "tools/promotion_unit_tests/test_typecheck_catalog.py::test_bootstrap_refuses_unreviewed_composition[member]",
+        "tools/promotion_unit_tests/test_typecheck_catalog.py::test_bootstrap_refuses_unreviewed_composition[template-slot]",
+        "tools/promotion_unit_tests/test_typecheck_catalog.py::test_bootstrap_custody_is_candidate_local"
     ],
     "coverage_targets": [
         "plugins/agent-vault/src/agent_vault/config.py",
@@ -5498,7 +5513,8 @@
         "plugins/agent-vault/src/agent_vault/attachment_export_files.py",
         "plugins/agent-vault/src/agent_vault/attachment_export_cli.py",
         "tools/artifact_bundle_validation.py",
-        "tools/promotion_source_history.py"
+        "tools/promotion_source_history.py",
+        "tools/typecheck_bootstrap_views.py"
     ],
     "sources": {
         "tools/promotion_unit_tests/test_source_witness.py": "b31fd450a32577aee9a5dca22606c02506a84da1d6d0ceb2e9486ee32af9ff3b",
@@ -6308,6 +6324,9 @@
         "tools/promotion_unit_tests/vault_export_model.py": "4044e54eede55e6a13835b673a066b275ed29a15930e8cfeffb7eeca78ed93d2",
         "tools/artifact_bundle_validation.py": "dc23fcd2524589773cde6325c30749df4102263cf2d5cf64712e81757895a943",
         "tools/promotion_source_history.py": "6d1b02b0466552267bc156fa3077a9dda07d80b9d6df5afd2e83c3c1b282d918",
-        "tools/runtime_profile_errors.py": "6e959565fc5ec6527b67346ac67d32d7aaca410e9a56f5f8e48c85b1453f4fce"
+        "tools/runtime_profile_errors.py": "6e959565fc5ec6527b67346ac67d32d7aaca410e9a56f5f8e48c85b1453f4fce",
+        "plugins/agent-worktrees/payload-invocation.json": "9e0dc64604bc87af7c08f6a18bd3d5612a710c3b3be9aa8eaa1885b0c38f9c11",
+        "tools/typecheck-projects.json": "8c062cfc17871bd1abae807e684f809a7a39fe6eb296fc0bb740bc7ca09a3926",
+        "tools/typecheck_bootstrap_views.py": "ffa24829a4d9f638b3f3096e8df11c42f09678bbfa997708844415de5495fa37"
     }
 }
