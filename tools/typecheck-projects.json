@@ -611,7 +611,8 @@
       ],
       "import_roots": [
         "fleet-manager/tests",
-        "plugins/agent-vault"
+        "plugins/agent-vault",
+        "plugins/agent-vault/scripts"
       ],
       "exclude": ["plugins/agent-vault/scripts/installer_engine.py"],
       "level": "pending",
