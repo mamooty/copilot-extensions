@@ -12,6 +12,13 @@ owners. This is a bounded W1/W2 validation slice, not a second installer, a
 replacement for another contributor's consumer, or completion of the parent
 inventory and installed-adoption goal.
 
+The current [Manager reference direction](app-footprint-transition.md) remains
+separate. This retained legacy consumer uses an already delivered original
+marketplace command owner and the existing runtime roots; it does not qualify
+the new app-root model or its no-plugin-owner first touch. #12905 retains that
+new-flow implementation and reference acceptance. No broader app conversion or
+replacement of that owner's work is introduced here.
+
 The existing implementation coordinator owns this qualification and ordinary
 caller convergence. The fresh dispatcher, declaration/association adapter,
 prepared-Worktrees contributor, constructor, execution and service-lifecycle
@@ -291,6 +298,10 @@ controls additionally pass in isolation, using actual pre-write reservation and
 lease borrowing rather than a synthetic incumbent. Whole-file strict Python
 3.10 Linux/Windows typing covers seven files; focused lint and documentation
 checks pass. These controls are not hosted native startup or update evidence.
+After reconciling current Dev, all 222 runner/workflow controls and the 24
+contained source controls pass again. The rebase preserves upstream type
+cleanup and refreshes the exact PR-service workflow expectation for its existing
+three bounded steps and complementary filters; no service behavior is changed.
 
 The validated runner reports preparation failure and successful settlement:
 no settlement errors, remaining fixture tasks or remaining processes. No
