@@ -5265,7 +5265,8 @@
         "tools/promotion_unit_tests/test_typecheck_new_code.py::test_independent_setup_view_refuses_changed_bound_program[source]",
         "tools/promotion_unit_tests/test_typecheck_new_code.py::test_independent_setup_view_refuses_changed_bound_program[output]",
         "tools/promotion_unit_tests/test_typecheck_new_code.py::test_checker_composes_canonical_and_copied_installation_programs_once[installation_context.py]",
-        "tools/promotion_unit_tests/test_typecheck_new_code.py::test_checker_composes_canonical_and_copied_installation_programs_once[_installation_context.py]"
+        "tools/promotion_unit_tests/test_typecheck_new_code.py::test_checker_composes_canonical_and_copied_installation_programs_once[_installation_context.py]",
+        "tools/promotion_unit_tests/test_typecheck_new_code.py::test_pr_ratchet_uses_the_feature_head_and_merge_base"
     ],
     "coverage_targets": [
         "plugins/agent-vault/src/agent_vault/config.py",
@@ -6429,7 +6430,7 @@
         "libs/agent-procutil/src/agent_procutil/python_cache_files.py": "2c80c32a7dd39251912dd33eb7a3d83901c7987f792e1b5fb773014c5981f024",
         "libs/agent-procutil/src/agent_procutil/python_cache_pyc.py": "1eaf3c6cbfc9e8d58466f2df6bc11556781a1febd5a240b16d4b061a7828f294",
         "libs/agent-procutil/tests/python_cache_pyc_fixtures.py": "39a73b0501d0cdd8eebc49d8a9ed31bcc5e1689f5b26ac405552ac59f5393385",
-        "tools/promotion_unit_tests/test_typecheck_new_code.py": "3c1fda470e6ef509663a6e4104362d85d6e4e302082e47896804052cb051a4ee",
+        "tools/promotion_unit_tests/test_typecheck_new_code.py": "f54357e1d994453097b99ff579b181aae72fc13479b00cf50f1f5d36a22d213f",
         "tools/typecheck_new_code.py": "987d264ea9b890ed540b3ed9de7820bd5a3e8c07b4d92d061e78ccf9f812e226"
     }
 }
