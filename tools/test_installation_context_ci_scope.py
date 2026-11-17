@@ -11,6 +11,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
 from typing import Any, NoReturn
@@ -59,7 +60,7 @@ def test_runtime_only_portfolio_refuses_incomplete_native_evidence(
             "test_real_cold_driver_and_native_reentry_use_the_same_owner[" + case + "]"
             for case in ("False-False", "False-True", "True-False")
         )
-    calls = []
+    calls: list[list[str]] = []
 
     def run(
         arguments: list[str], *, timeout: float, max_stdout_bytes: int,
@@ -301,8 +302,8 @@ ET.ElementTree(root).write(reports / "native.xml")
     if outcome == "passed" or (outcome == "skipped" and step_id == "consumers"):
         exec(body, {})
     else:
-        expected = subprocess.CalledProcessError if outcome == "failed" else AssertionError
-        with pytest.raises(expected):
+        expected_error = subprocess.CalledProcessError if outcome == "failed" else AssertionError
+        with pytest.raises(expected_error):
             exec(body, {})
     arguments = json.loads((tmp_path / "arguments.json").read_text())
     assert arguments[0] == "agent-worktrees"
@@ -1341,7 +1342,7 @@ def test_constructor_groups_and_mutations_move_to_existing_lanes_without_droppin
 def test_manager_native_step_retains_owned_cleanup_and_child_failure(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, job_key: str, failure_at: int | None,
 ) -> None:
-    import plugin_test_containment as containment
+    containment = importlib.import_module("plugin_test_containment")
 
     workflow = yaml.safe_load(
         (HERE.parent / ".github/workflows/installation-context-acceptance.yml").read_text()
@@ -1407,8 +1408,8 @@ def test_manager_native_step_loads_first_party_helpers_without_site_packages(
         step for step in workflow["jobs"]["source-build-linux"]["steps"]
         if step.get("name") == "Persisted Manager admission and fresh-process offline reuse"
     )
-    original_run = containment.run_contained
-    calls = []
+    original_run: Callable[..., int] = containment.run_contained
+    calls: list[list[str]] = []
     script = """
 import pathlib, sys
 import agent_procutil
@@ -1694,7 +1695,7 @@ def test_explicit_foundation_lifetime_retains_negative_controls_and_failure(
     selection: str, expected: str, cleanup_raises: bool, cleanup_overrun: bool,
     stack_diagnostics: bool,
 ) -> None:
-    from plugin_test_containment import UnreapedProcessError
+    containment = importlib.import_module("plugin_test_containment")
 
     spec = importlib.util.spec_from_file_location(
         "qualified_foundation_lifetime", HERE / "qualify_foundation_lifetime.py",
@@ -1711,7 +1712,7 @@ def test_explicit_foundation_lifetime_retains_negative_controls_and_failure(
     (sandbox / "fixture.log").write_text("exact fixture failure", encoding="utf-8")
     observed: dict[str, Any] = {}
     clock = [0.0]
-    failure = UnreapedProcessError("unconfirmed fixture cleanup")
+    failure = containment.UnreapedProcessError("unconfirmed fixture cleanup")
 
     def run(arguments: list[str], **options: Any) -> int:
         assert observed.get("admitted") is True
