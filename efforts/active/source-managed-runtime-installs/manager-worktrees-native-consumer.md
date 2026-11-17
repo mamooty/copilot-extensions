@@ -268,6 +268,24 @@ finishing this fixture cannot finalize the parent worktrees.
 
 ## Journal
 
+### 2026-11-17 - Keep diagnostic PIDs outside cleanup custody
+
+The fresh review of `a2feb728f22ec30eb2c96d10196a2ab0c1b63eee`
+identified a valid cleanup regression before another native attempt:
+`resident_observations` is consumed as a birth-bound custody collection by the
+existing settlement owner. Exited diagnostic rows have no `created_ns` and
+therefore cannot belong in that collection.
+
+The snapshot now places those rows in separate `resident_diagnostics`, retaining
+only identity-bound live observations in `resident_observations`. The existing
+cleanup owner is unchanged; no missing identity is synthesized or ignored.
+Both exited-handle and disappeared-PID regressions exercise the actual cleanup
+and source-settlement path with only the OS adapters controlled. They verify
+that remaining-process inventory runs and `settlement.json` is written without
+errors. All 28 contained controls pass, as do strict Linux/Windows typing and
+focused lint. Fresh review and CI remain prerequisites; the tenth native
+attempt has not been submitted and the ninth failure retains its status.
+
 ### 2026-11-17 - Record an exited resident without claiming liveness
 
 [Run 44027590695](https://github.com/ThomasMichon/copilot-extensions/actions/runs/44027590695),

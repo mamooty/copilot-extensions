@@ -246,8 +246,18 @@ def _resident_observation(root: Path, name: str) -> dict[str, Any] | None:
     return {"pid": pid, "state": "exited-before-observation", "exit_code": code}
 
 
+def _resident_snapshot(case: Path) -> dict[str, dict[str, Any]]:
+    result: dict[str, dict[str, Any]] = {"resident_observations": {}, "resident_diagnostics": {}}
+    for name in COMPONENTS:
+        observation = _resident_observation(case / "h" / ("." + name), name)
+        if observation is not None:
+            target = "resident_observations" if "created_ns" in observation else "resident_diagnostics"
+            result[target][name] = observation
+    return result
+
+
 def _capture(case: Path) -> dict[str, Any]:
-    result: dict[str, Any] = {"applications": {}, "resident_observations": {}}
+    result: dict[str, Any] = {"applications": {}}
     for name, module in (("worktree-manager", "worktree_manager"), ("agent-worktrees", "agent_worktrees")):
         root = case / "h" / ("." + name)
         python = native._python(root)
@@ -273,9 +283,7 @@ def _capture(case: Path) -> dict[str, Any]:
             "generation": generation, "slot": str(slot), "origin": origin,
             "application": native._read(slot / "application.json"),
         }
-        observation = _resident_observation(root, name)
-        if observation is not None:
-            result["resident_observations"][name] = observation
+    result.update(_resident_snapshot(case))
     commands = {"agent-worktrees": worktrees_frontdoors(
         case, Path(result["applications"]["agent-worktrees"]["origin"]["executable"]),
     )}

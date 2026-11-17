@@ -120,8 +120,9 @@ and use the normal worktree finalization flow; a merged child is insufficient.
 resident observation. The ninth hosted attempt completed both Main application
 installations, then failed while opening a published resident PID that had
 already disappeared. The fixture records that specific observation race without
-claiming liveness; access failures and actual command/readiness checks remain
-blocking. Settlement left no fixture tasks or processes. Another native attempt
+claiming liveness and keeps it outside identity-bound cleanup records; access
+failures and actual command/readiness checks remain blocking. Settlement left
+no fixture tasks or processes. Another native attempt
 remains held until focused validation, fresh review and required CI pass; no
 update, survival or adoption pass is inferred.
 

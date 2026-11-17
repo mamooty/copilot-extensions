@@ -512,6 +512,54 @@ def test_resident_observation_does_not_hide_unavailable_process_access(
         source._resident_observation(tmp_path, "worktree-manager")
 
 
+@pytest.mark.parametrize("vanished", [False, True], ids=["exited-handle", "vanished-pid"])
+def test_exited_resident_diagnostics_survive_actual_settlement(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, vanished: bool,
+) -> None:
+    def record(_root: Path, name: str) -> tuple[dict[str, Any], int]:
+        if name != "worktree-manager":
+            raise FileNotFoundError(name)
+        return {"pid": 1234}, 0
+
+    class ExitedProcess:
+        def __init__(self, _pid: int) -> None:
+            if vanished:
+                error = OSError("the published resident has already exited")
+                setattr(error, "winerror", 87)
+                raise error
+
+        def __enter__(self) -> ExitedProcess:
+            return self
+
+        def __exit__(self, *_args: Any) -> None:
+            pass
+
+        def times(self) -> tuple[int, int, int]:
+            return 100, 200, 0
+
+    inventory_calls: list[list[Any]] = []
+
+    def inventory(argv: list[Any], _case: Path, **_options: Any) -> subprocess.CompletedProcess[str]:
+        inventory_calls.append(argv)
+        return subprocess.CompletedProcess(argv, 0, "[]", "")
+
+    monkeypatch.setattr(native, "_record", record)
+    monkeypatch.setattr(native, "closing_process", ExitedProcess)
+    monkeypatch.setattr(native, "_tasks", lambda _case: [])
+    monkeypatch.setattr(native, "_run", inventory)
+    snapshot = source._resident_snapshot(tmp_path)
+    assert snapshot["resident_observations"] == {}
+    assert snapshot["resident_diagnostics"]["worktree-manager"]["state"] == "exited-before-observation"
+    setup = {"before": snapshot}
+    _write(tmp_path / "setup.json", setup)
+    monkeypatch.setattr(source, "_case", lambda _directory: (tmp_path, setup))
+    source.settle(tmp_path)
+    settled = native._read(tmp_path / "settlement.json")
+    assert settled["errors"] == settled["remaining_tasks"] == settled["remaining_processes"] == []
+    assert len(inventory_calls) == 1
+    assert "Win32_Process" in inventory_calls[0][-1]
+
+
 def test_source_prepare_refuses_local_native_effects(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
     with pytest.raises(RuntimeError, match="disposable GitHub-hosted Windows VM"):
