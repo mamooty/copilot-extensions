@@ -100,7 +100,8 @@ def manager_source(adopter: _Adopter, configured_source: tuple[Path, Path, str, 
         "    shutil.copytree(data['frozen_plugin'], pathlib.Path(sys.prefix) / 'payload')\n"
         "def verify_runtime_candidate():\n"
         "    import worktree_manager\n"
-        "    assert pathlib.Path(worktree_manager.__file__).is_relative_to(pathlib.Path(sys.prefix))\n"
+        "    assert any(parent.samefile(sys.prefix)\n"
+        "               for parent in pathlib.Path(worktree_manager.__file__).resolve().parents)\n"
         "    assert importlib.metadata.version('copilot-extensions-worktree-manager') == '1.2.3.dev1'\n",
         encoding="utf-8",
     )
@@ -109,6 +110,7 @@ def manager_source(adopter: _Adopter, configured_source: tuple[Path, Path, str, 
     for name in (
         "runtime_launcher.py", "versioned_runtime.py", "versioned_runtime_leases.py",
         "versioned_runtime_source.py", "versioned_runtime_construction.py", "versioned_runtime_publication.py",
+        "versioned_runtime_cache.py", "daemon_instance_runtime.pyz",
     ):
         shutil.copyfile(Path(cast(str, cast("Callable[[], ModuleType]", si._runtime_installer)().__file__)).with_name(name), scripts / name)
     references = project / "references"
@@ -350,7 +352,8 @@ def test_manager_closed_native(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) 
         "    shutil.copytree(data['frozen_plugin'], pathlib.Path(sys.prefix) / 'payload')\n"
         "def verify_runtime_candidate():\n"
         "    import worktree_manager\n"
-        "    assert pathlib.Path(worktree_manager.__file__).is_relative_to(pathlib.Path(sys.prefix))\n"
+        "    assert any(parent.samefile(sys.prefix)\n"
+        "               for parent in pathlib.Path(worktree_manager.__file__).resolve().parents)\n"
         "    assert importlib.metadata.version('copilot-extensions-worktree-manager') == '1.2.3.dev1'\n",
         encoding="utf-8",
     )
@@ -360,6 +363,7 @@ def test_manager_closed_native(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) 
         "runtime_launcher.py", "versioned_runtime.py", "versioned_runtime_leases.py",
         "versioned_runtime_source.py", "versioned_runtime_construction.py",
         "versioned_runtime_publication.py",
+        "versioned_runtime_cache.py", "daemon_instance_runtime.pyz",
     ):
         shutil.copyfile(Path(cast(str, adapter.__file__)).with_name(name), scripts / name)
     cast("_LegacyAttributeSource", _attribute_source)(adapter, payload, version="1.2.3.dev1")
