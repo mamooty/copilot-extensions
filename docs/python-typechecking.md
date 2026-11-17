@@ -50,6 +50,13 @@ its own declared admission; this does not qualify every shipped copy.
 An `--all` probe reports absent pending scopes without trying to check them;
 explicit scope checks and admitted empty scopes still refuse qualification.
 
+The Python-owned `installer_engine.py` constructor and each physical consumer
+have separate pending Python 3.11 analysis scopes, matching the installer
+bootstrap's existing minimum. Their surrounding runtime and dependency-policy
+code retains its Python 3.10 target. Manager uses its declared Python 3.11
+package minimum. These target corrections do not admit a pending scope or
+remove any file from the whole-file strict ratchet.
+
 ## Local commands
 
 From the source repository root, with Python and UV available:

@@ -172,8 +172,16 @@
         "libs/installer-engine",
         "libs/versioned-runtime"
       ],
-      "exclude": [],
+      "exclude": ["libs/installer-engine/installer_engine.py"],
       "level": "pending"
+    },
+    {
+      "name": "lib-installer-engine-core",
+      "include": ["libs/installer-engine/installer_engine.py"],
+      "import_roots": ["libs/installer-engine", "libs/versioned-runtime"],
+      "exclude": [],
+      "level": "pending",
+      "python_version": "3.11"
     },
     {
       "name": "lib-installer-readiness",
@@ -329,8 +337,15 @@
       "include": [
         "libs/update-driver"
       ],
-      "exclude": [],
+      "exclude": ["libs/update-driver/scripts/installer_engine.py"],
       "level": "pending"
+    },
+    {
+      "name": "lib-update-driver-installer",
+      "include": ["libs/update-driver/scripts/installer_engine.py"],
+      "exclude": [],
+      "level": "pending",
+      "python_version": "3.11"
     },
     {
       "name": "lib-update-telemetry",
@@ -406,18 +421,32 @@
       "include": [
         "plugins/agent-bridge"
       ],
-      "exclude": [],
+      "exclude": ["plugins/agent-bridge/scripts/installer_engine.py"],
       "level": "pending",
       "requirements": "tools/typecheck-bridge-requirements.txt",
       "import_roots": ["tools"]
+    },
+    {
+      "name": "agent-bridge-installer",
+      "include": ["plugins/agent-bridge/scripts/installer_engine.py"],
+      "exclude": [],
+      "level": "pending",
+      "python_version": "3.11"
     },
     {
       "name": "agent-codespaces",
       "include": [
         "plugins/agent-codespaces"
       ],
-      "exclude": [],
+      "exclude": ["plugins/agent-codespaces/scripts/installer_engine.py"],
       "level": "pending"
+    },
+    {
+      "name": "agent-codespaces-installer",
+      "include": ["plugins/agent-codespaces/scripts/installer_engine.py"],
+      "exclude": [],
+      "level": "pending",
+      "python_version": "3.11"
     },
     {
       "name": "agent-conduct-guidance",
@@ -432,54 +461,96 @@
       "include": [
         "plugins/agent-containers"
       ],
-      "exclude": [],
+      "exclude": ["plugins/agent-containers/scripts/installer_engine.py"],
       "level": "pending",
       "requirements": "tools/typecheck-yaml-requirements.txt"
+    },
+    {
+      "name": "agent-containers-installer",
+      "include": ["plugins/agent-containers/scripts/installer_engine.py"],
+      "exclude": [],
+      "level": "pending",
+      "python_version": "3.11"
     },
     {
       "name": "agent-dispatch",
       "include": [
         "plugins/agent-dispatch"
       ],
-      "exclude": [],
+      "exclude": ["plugins/agent-dispatch/scripts/installer_engine.py"],
       "level": "pending",
       "requirements": "tools/typecheck-service-index-requirements.txt"
+    },
+    {
+      "name": "agent-dispatch-installer",
+      "include": ["plugins/agent-dispatch/scripts/installer_engine.py"],
+      "exclude": [],
+      "level": "pending",
+      "python_version": "3.11"
     },
     {
       "name": "agent-index",
       "include": [
         "plugins/agent-index"
       ],
-      "exclude": [],
+      "exclude": ["plugins/agent-index/scripts/installer_engine.py"],
       "level": "pending",
       "requirements": "tools/typecheck-service-index-requirements.txt"
+    },
+    {
+      "name": "agent-index-installer",
+      "include": ["plugins/agent-index/scripts/installer_engine.py"],
+      "exclude": [],
+      "level": "pending",
+      "python_version": "3.11"
     },
     {
       "name": "agent-logger",
       "include": [
         "plugins/agent-logger"
       ],
-      "exclude": [],
+      "exclude": ["plugins/agent-logger/scripts/installer_engine.py"],
       "level": "pending",
       "requirements": "tools/typecheck-yaml-requirements.txt"
+    },
+    {
+      "name": "agent-logger-installer",
+      "include": ["plugins/agent-logger/scripts/installer_engine.py"],
+      "exclude": [],
+      "level": "pending",
+      "python_version": "3.11"
     },
     {
       "name": "agent-machines",
       "include": [
         "plugins/agent-machines"
       ],
-      "exclude": [],
+      "exclude": ["plugins/agent-machines/scripts/installer_engine.py"],
       "level": "pending",
       "requirements": "tools/typecheck-yaml-requirements.txt"
+    },
+    {
+      "name": "agent-machines-installer",
+      "include": ["plugins/agent-machines/scripts/installer_engine.py"],
+      "exclude": [],
+      "level": "pending",
+      "python_version": "3.11"
     },
     {
       "name": "agent-mcp",
       "include": [
         "plugins/agent-mcp"
       ],
-      "exclude": [],
+      "exclude": ["plugins/agent-mcp/scripts/installer_engine.py"],
       "level": "pending",
       "requirements": "tools/typecheck-yaml-requirements.txt"
+    },
+    {
+      "name": "agent-mcp-installer",
+      "include": ["plugins/agent-mcp/scripts/installer_engine.py"],
+      "exclude": [],
+      "level": "pending",
+      "python_version": "3.11"
     },
     {
       "name": "agent-pull-requests",
@@ -490,9 +561,16 @@
       "include": [
         "plugins/agent-pull-requests"
       ],
-      "exclude": [],
+      "exclude": ["plugins/agent-pull-requests/scripts/installer_engine.py"],
       "level": "pending",
       "requirements": "tools/typecheck-service-ssh-requirements.txt"
+    },
+    {
+      "name": "agent-pull-requests-installer",
+      "include": ["plugins/agent-pull-requests/scripts/installer_engine.py"],
+      "exclude": [],
+      "level": "pending",
+      "python_version": "3.11"
     },
     {
       "name": "agent-remote-driver",
@@ -515,9 +593,16 @@
       "include": [
         "plugins/agent-ssh"
       ],
-      "exclude": [],
+      "exclude": ["plugins/agent-ssh/scripts/installer_engine.py"],
       "level": "pending",
       "requirements": "tools/typecheck-runner-requirements.txt"
+    },
+    {
+      "name": "agent-ssh-installer",
+      "include": ["plugins/agent-ssh/scripts/installer_engine.py"],
+      "exclude": [],
+      "level": "pending",
+      "python_version": "3.11"
     },
     {
       "name": "agent-vault",
@@ -528,9 +613,16 @@
         "fleet-manager/tests",
         "plugins/agent-vault"
       ],
-      "exclude": [],
+      "exclude": ["plugins/agent-vault/scripts/installer_engine.py"],
       "level": "pending",
       "requirements": "tools/typecheck-service-ssh-requirements.txt"
+    },
+    {
+      "name": "agent-vault-installer",
+      "include": ["plugins/agent-vault/scripts/installer_engine.py"],
+      "exclude": [],
+      "level": "pending",
+      "python_version": "3.11"
     },
     {
       "name": "agent-worktrees",
@@ -559,9 +651,16 @@
           ]
         }
       ],
-      "exclude": [],
+      "exclude": ["plugins/agent-worktrees/scripts/installer_engine.py"],
       "level": "pending",
       "requirements": "tools/typecheck-yaml-requirements.txt"
+    },
+    {
+      "name": "agent-worktrees-installer",
+      "include": ["plugins/agent-worktrees/scripts/installer_engine.py"],
+      "exclude": [],
+      "level": "pending",
+      "python_version": "3.11"
     },
     {
       "name": "ai-attribution",
@@ -576,8 +675,15 @@
       "include": [
         "plugins/budget-guidance"
       ],
-      "exclude": [],
+      "exclude": ["plugins/budget-guidance/scripts/installer_engine.py"],
       "level": "pending"
+    },
+    {
+      "name": "budget-guidance-installer",
+      "include": ["plugins/budget-guidance/scripts/installer_engine.py"],
+      "exclude": [],
+      "level": "pending",
+      "python_version": "3.11"
     },
     {
       "name": "context-handoff",
@@ -741,6 +847,7 @@
         "worktree-manager/tests",
         "worktree-manager/tests/native"
       ],
+      "python_version": "3.11",
       "requirements": "tools/typecheck-runner-requirements.txt"
     }
   ]
