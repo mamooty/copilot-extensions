@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+from collections.abc import Iterable
 import importlib.util
 import json
 import os
@@ -11,6 +12,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+from typing import Any, Protocol, cast
 
 from agent_procutil import no_window_kwargs
 
@@ -27,6 +29,7 @@ RECIPES = {
     "agent-logger": "AGENT_LOGGER",
     "agent-bridge": "AGENT_BRIDGE",
     "agent-mcp": "AGENT_MCP",
+    "agent-dispatch": "AGENT_DISPATCH",
 }
 LOGGER_COMMANDS = (
     ("agent-logger", "agent_logger"),
@@ -78,6 +81,12 @@ MCP_CONTEXT_KEYS = (
     "AGENT_MCP_NO_CUTOVER", "AGENT_MCP_CUTOVER_DRAIN_TIMEOUT",
     "AGENT_MCP_CUTOVER_HEALTH_TIMEOUT", "AGENT_MCP_NO_VERSION_REAP",
 )
+DISPATCH_CONTEXT_KEYS = (
+    "HOME", "USERPROFILE", "COPILOT_EXTENSIONS_CONTEXT", "COPILOT_PLUGIN_ROOT",
+    "AGENT_DISPATCH_HOME", "AGENT_DISPATCH_INSTALLATION_ID",
+    "AGENT_DISPATCH_NO_SELFPROVISION", "AGENT_DISPATCH_PINNED_CONTEXT",
+    "AGENT_DISPATCH_ALLOW_DOWNGRADE",
+)
 BRIDGE_HELPERS = (
     "installer-engine.ps1", "installer-engine.sh",
     "installer_engine.py", "installer_engine_health.py", "installer_engine_process.py", "runtime_launcher.py",
@@ -108,10 +117,43 @@ MCP_HELPERS = (
     "versioned_runtime_publication.py", "versioned_runtime_leases.py", "uninstall-profile.json",
     "versioned_runtime_cache.py", "daemon_instance_runtime.pyz",
 )
+DISPATCH_HELPERS = (
+    "installer-engine.ps1", "installer-engine.sh",
+    "installer_engine.py", "installer_engine_health.py", "installer_engine_process.py", "runtime_launcher.py",
+    "installer_wheel_inputs.py", "installer_wheel_snapshot.py", "installer_wheel_acquisition.py",
+    "installer_dependency_policy.py", "installer_dependency_config.py", "installer_dependency_arguments.py",
+    "installer_source_build.py", "installer_source_wheel_cache.py",
+    "installation-context/installation_context.py",
+    "installation-context/installation-context.ps1", "installation-context/installation-context.sh",
+    "install.ps1", "install.sh", "versioned_runtime_native.ps1", "versioned_runtime.py",
+    "versioned_runtime_construction.py", "versioned_runtime_source.py",
+    "versioned_runtime_publication.py", "versioned_runtime_leases.py",
+    "versioned_runtime_cache.py", "daemon_instance_runtime.pyz",
+    "installer-instance-reconcile.ps1", "installer-instance-reconcile.sh", "installer_instance_reconcile.py",
+    "source-runtime.ps1", "source-runtime.sh", "supervisor-lifecycle.ps1", "base-python.ps1",
+    "runtime-gate.ps1", "runtime-gate.sh", "resolve-runtime.ps1", "resolve-runtime.sh",
+)
 
 
 class ProvisionError(core.DriverError):
     """Owning-source or publication admission refused provisioning."""
+
+
+class _Runtime(Protocol):
+    def fingerprint_source(self, files: Iterable[Path]) -> str: ...
+
+
+class _SourceIdentity(Protocol):
+    @property
+    def runtime_version(self) -> str: ...
+
+    def document(self) -> dict[str, Any]: ...
+
+
+class _RuntimeSources(Protocol):
+    def read_source_identity(
+        self, payload: Path, version: str, *, plugin: str,
+    ) -> _SourceIdentity | None: ...
 
 
 def _path(path: Path, *, exists: bool = False) -> Path:
@@ -151,6 +193,11 @@ def _environment(payload: Path) -> dict[str, str]:
         "AGENT_BRIDGE_CONFIG_DIR", "AGENT_BRIDGE_INSTALL_DIR",
         "AGENT_MCP_VALIDATED_CONTEXT", "AGENT_MCP_PAYLOAD_ROOT", "AGENT_MCP_ACTION",
         "AGENT_MCP_MARKETPLACE_ROOT",
+        "AGENT_DISPATCH_VALIDATED_CONTEXT", "AGENT_DISPATCH_PAYLOAD_ROOT",
+        "AGENT_DISPATCH_ACTION", "AGENT_DISPATCH_DRY_RUN", "AGENT_DISPATCH_FORCE",
+        "AGENT_DISPATCH_CONFIG_DIR", "AGENT_DISPATCH_INSTALL_DIR",
+        "AGENT_DISPATCH_ROUTING_DIR", "AGENT_DISPATCH_RUN_DIR",
+        "AGENT_DISPATCH_COMMAND_MODULE",
     ):
         result.pop(key, None)
     return result
@@ -158,7 +205,7 @@ def _environment(payload: Path) -> dict[str, str]:
 
 def _inspect(
     payload: Path, runtime_root: Path, project: Path, *, installer_action: str = "provision",
-) -> dict:
+) -> dict[str, Any]:
     """Normalize source-controlled validation failures without enclosing custody operations."""
     try:
         return _inspect_payload(payload, runtime_root, project, installer_action=installer_action)
@@ -170,7 +217,7 @@ def _inspect(
 
 def _inspect_payload(
     payload: Path, runtime_root: Path, project: Path, *, installer_action: str = "provision",
-) -> dict:
+) -> dict[str, Any]:
     """Run only in the isolated inspection/owned execution process."""
     sys.dont_write_bytecode = True
     if installer_action not in INSTALLER_ACTIONS:
@@ -204,6 +251,11 @@ def _inspect_payload(
         or manifest.get("windowsCatalogShim") != "cmd"
     ):
         raise ProvisionError("MCP first use requires its native installer lifecycle and CMD catalog")
+    if plugin == "agent-dispatch":
+        if any(not (scripts / name).is_file() for name in DISPATCH_HELPERS):
+            raise ProvisionError("Dispatch first use requires its complete materialized installation helpers")
+        if manifest.get("installerLifecycle") is not True or manifest.get("windowsCatalogShim") != "cmd":
+            raise ProvisionError("Dispatch first use requires its native lifecycle and CMD catalog declaration")
     if plugin == "agent-bridge" and sys.platform.startswith("linux"):
         for tool in ("xargs", "seq"):
             if shutil.which(tool) is None:
@@ -237,9 +289,9 @@ def _inspect_payload(
         raise ProvisionError("owning plugin self-provisioning is disabled")
     if prefix + "_PINNED_CONTEXT" in os.environ:
         raise ProvisionError("pinned identity reads require a prepared owning runtime")
-    if plugin in ("agent-ssh", "agent-codespaces", "agent-logger", "agent-bridge", "agent-mcp"):
+    if plugin in ("agent-ssh", "agent-codespaces", "agent-logger", "agent-bridge", "agent-mcp", "agent-dispatch"):
         label = {"agent-ssh": "SSH", "agent-codespaces": "CodeSpaces", "agent-logger": "Logger",
-                 "agent-bridge": "Bridge", "agent-mcp": "MCP"}[plugin]
+                 "agent-bridge": "Bridge", "agent-mcp": "MCP", "agent-dispatch": "Dispatch"}[plugin]
         if (
             (plugin != "agent-logger" and manifest.get("module") != plugin.replace("-", "_"))
             or manifest.get("legacyRuntimeRoot") != "." + plugin
@@ -249,7 +301,7 @@ def _inspect_payload(
             }
         ):
             raise ProvisionError(f"{label} first use requires its declared native runtime gate")
-    if plugin in ("agent-codespaces", "agent-logger", "agent-bridge", "agent-mcp") and (
+    if plugin in ("agent-codespaces", "agent-logger", "agent-bridge", "agent-mcp", "agent-dispatch") and (
         prefix + "_INSTALLATION_ID" in os.environ
         or runtime_root != Path.home() / ("." + plugin)
         or not (
@@ -285,6 +337,8 @@ def _inspect_payload(
 
     sys.path.insert(0, str(scripts))
     import installer_engine as engine
+    runtime = cast(_Runtime, vars(engine)["runtime"])
+    runtime_source = cast(_RuntimeSources, vars(engine)["runtime_source"])
 
     try:
         roots = engine._package_roots(payload)
@@ -292,13 +346,13 @@ def _inspect_payload(
         raise ProvisionError(f"owning source dependencies refused: {error}") from error
     if any(not root.is_relative_to(payload) for root in roots):
         raise ProvisionError("first-use provisioning requires a self-contained owning payload")
-    digest = engine.runtime.fingerprint_source(engine._source_files(roots))
+    digest = runtime.fingerprint_source(engine._source_files(roots))
     selected_source = None
     if plugin == "agent-bridge" and payload.parent == runtime_root / "snapshots":
         package_version = identity.get("version")
         if not isinstance(package_version, str) or not package_version:
             raise ProvisionError("Bridge selected snapshot requires its package version")
-        selected_source = engine.runtime_source.read_source_identity(
+        selected_source = runtime_source.read_source_identity(
             payload, package_version, plugin=plugin,
         )
         if selected_source is None or selected_source.runtime_version != payload.name:
@@ -327,7 +381,7 @@ def _inspect_payload(
         or resolution["deployment"]["allowPluginPublication"] is not True
     ):
         raise ProvisionError("owning installation does not permit plugin publication")
-    if engine.runtime.fingerprint_source(engine._source_files(roots)) != digest:
+    if runtime.fingerprint_source(engine._source_files(roots)) != digest:
         raise ProvisionError("owning source changed during provision admission")
     return {
         "schema": "copilot-extensions.owning-plugin-provision", "version": PROTOCOL,
@@ -345,7 +399,7 @@ def _inspect_payload(
 
 def inspect(
     payload: Path, runtime_root: Path, project: Path, *, installer_action: str = "provision",
-) -> dict:
+) -> dict[str, Any]:
     """Read canonical owning-source admission without mutating either installation."""
     if installer_action not in INSTALLER_ACTIONS:
         raise ProvisionError("unsupported owning installer action")
@@ -365,7 +419,7 @@ def inspect(
     )
     if result.returncode != 0:
         raise ProvisionError("owning source/publication admission failed:\n" + result.stderr)
-    return json.loads(result.stdout)
+    return cast(dict[str, Any], json.loads(result.stdout))
 
 
 def enqueue(
@@ -408,6 +462,7 @@ def enqueue(
         "agent-logger": LOGGER_CONTEXT_KEYS,
         "agent-bridge": BRIDGE_CONTEXT_KEYS,
         "agent-mcp": MCP_CONTEXT_KEYS,
+        "agent-dispatch": DISPATCH_CONTEXT_KEYS,
     }[admission["plugin"]]
     context = {key: os.environ[key] for key in context_keys if key in os.environ}
     context["COPILOT_PLUGIN_ROOT"] = str(payload)
@@ -428,7 +483,7 @@ def enqueue(
     )
 
 
-def _execute(admission: dict, *, root: Path, client_only: bool = False) -> int:
+def _execute(admission: dict[str, Any], *, root: Path, client_only: bool = False) -> int:
     custody = borrowed_custody(root=root)
     if custody is None:
         raise ProvisionError("plugin provisioning requires live installation custody")
@@ -459,6 +514,7 @@ def _execute(admission: dict, *, root: Path, client_only: bool = False) -> int:
                 "agent-pull-requests", "agent-ssh", "agent-codespaces", "agent-logger",
                 "agent-bridge",
                 "agent-mcp",
+                "agent-dispatch",
             }
             inputs = _path(
                 runtime_root / ".install-stage" if legacy_stage
@@ -533,6 +589,7 @@ def _execute(admission: dict, *, root: Path, client_only: bool = False) -> int:
 
 def _ssh_stamp_hash(payload: Path) -> str:
     import installer_engine as engine
+    runtime = cast(_Runtime, vars(engine)["runtime"])
 
     # The canonical legacy stamp changes only these publication sidecars and
     # intentionally omits top-level tests; every other admitted byte must match.
@@ -542,7 +599,7 @@ def _ssh_stamp_hash(payload: Path) -> str:
         if path.relative_to(payload).as_posix() not in sidecars
         and path.relative_to(payload).parts[0] != "tests"
     )
-    return engine.runtime.fingerprint_source(files)
+    return runtime.fingerprint_source(files)
 
 
 def _run_installer(
@@ -551,11 +608,11 @@ def _run_installer(
 ) -> int:
     installer = "init" if plugin_id == "agent-mcp" else "install"
     if os.name == "nt":
-        shell = Path(os.environ["SystemRoot"]) / (
+        windows_shell = Path(os.environ["SystemRoot"]) / (
             "System32/WindowsPowerShell/v1.0/powershell.exe"
         )
         argv = [
-            str(shell), "-NoLogo", "-NoProfile", "-NonInteractive",
+            str(windows_shell), "-NoLogo", "-NoProfile", "-NonInteractive",
             "-ExecutionPolicy", "Bypass", "-File", str(payload / "scripts" / f"{installer}.ps1"),
             installer_action, "-InstallDir", str(runtime_root),
             *(("-NoService",) if client_only else ()),
@@ -578,7 +635,7 @@ $env:PATH = [IO.Path]::GetDirectoryName($uv) + ';' + $env:PATH
 exit $LASTEXITCODE
 """.replace("__CONFIG__", data)
             argv = [
-                str(shell), "-NoLogo", "-NoProfile", "-NonInteractive",
+                str(windows_shell), "-NoLogo", "-NoProfile", "-NonInteractive",
                 "-ExecutionPolicy", "Bypass", "-Command", command,
             ]
     elif sys.platform.startswith("linux"):
@@ -671,6 +728,7 @@ def main() -> int:
         )
         if result.state != "completed":
             raise ProvisionError("plugin provision request requires explicit recovery")
+        assert result.exit_code is not None
         return result.exit_code
     except (core.DriverError, OSError, ValueError, subprocess.TimeoutExpired) as error:
         parser.exit(1, f"Owning plugin provision refused: {error}\n")
