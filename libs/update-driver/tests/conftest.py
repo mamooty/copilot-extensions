@@ -344,12 +344,21 @@ def owning_dispatch(owning_payload: OwningPayload) -> OwningPayload:
         "[IO.Directory]::CreateDirectory",
         "if (" + " -or ".join("$env:AGENT_DISPATCH_" + key for key in controls) +
         ") { exit 94 }\n[IO.Directory]::CreateDirectory", 1,
+    ).replace(
+        "exit 7\n",
+        "[IO.File]::AppendAllText((Join-Path $InstallDir 'wsl-client-history'), "
+        "('[' + [string]$env:AGENT_DISPATCH_WSL_WINDOWS_CLIENT + ']' + [Environment]::NewLine))\n"
+        "exit 7\n",
     ), encoding="utf-8")
     posix = payload / "scripts/install.sh"
     posix.write_text(posix.read_text().replace(
         "mkdir -p", "[[ " + " && ".join(
             '-z "${AGENT_DISPATCH_' + key + ':-}"' for key in controls
         ) + " ]]\n[[ \"$#\" == 3 ]]\nmkdir -p", 1,
+    ).replace(
+        "exit 7\n",
+        'printf "[%s]\\n" "${AGENT_DISPATCH_WSL_WINDOWS_CLIENT:-}" >>"$3/wsl-client-history"\n'
+        "exit 7\n",
     ), encoding="utf-8")
     repository = Path(__file__).resolve().parents[3]
     shutil.copyfile(

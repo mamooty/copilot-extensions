@@ -90,11 +90,17 @@ REPOSITORY = Path(__file__).resolve().parents[3]
 
 
 @pytest.mark.parametrize("action", ["stamp", "provision"])
+@pytest.mark.parametrize("submitted_wsl", [None, "0", "1"])
 def test_dispatch_fixed_action_keeps_native_options_context_custody_and_result(
     owning_dispatch: OwningPayload, area: Path, monkeypatch: pytest.MonkeyPatch, action: str,
+    submitted_wsl: str | None,
 ) -> None:
     payload, installation, project = owning_dispatch
     root = area / "queue"
+    if submitted_wsl is None:
+        monkeypatch.delenv("AGENT_DISPATCH_WSL_WINDOWS_CLIENT", raising=False)
+    else:
+        monkeypatch.setenv("AGENT_DISPATCH_WSL_WINDOWS_CLIENT", submitted_wsl)
     request = provision.enqueue(payload, installation, project, root=root, installer_action=action)
     repeated = provision.enqueue(payload, installation, project, root=root, installer_action=action)
     assert request.id == repeated.id and not installation.exists()
@@ -102,11 +108,13 @@ def test_dispatch_fixed_action_keeps_native_options_context_custody_and_result(
     for key in ("ACTION", "DRY_RUN", "FORCE", "PAYLOAD_ROOT", "VALIDATED_CONTEXT", "NO_SELFPROVISION",
                 "CONFIG_DIR", "INSTALL_DIR", "ROUTING_DIR", "RUN_DIR", "COMMAND_MODULE"):
         monkeypatch.setenv("AGENT_DISPATCH_" + key, "foreign")
+    monkeypatch.setenv("AGENT_DISPATCH_WSL_WINDOWS_CLIENT", "0" if submitted_wsl == "1" else "1")
     drain(root=root)
     result = _request(request.id, root)
     assert result.state == "completed" and result.exit_code == 7, result.log_path.read_text()
     assert (installation / "executed").read_text() == action
     assert (installation / "client-only").read_text().strip() == "0"
+    assert (installation / "wsl-client-history").read_text().strip() == f"[{submitted_wsl or ''}]"
     assert Path((installation / "project-path").read_text()) == project
     frozen = Path((installation / "source-path").read_text().strip()).parent
     assert frozen.name == "agent-dispatch"
