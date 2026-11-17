@@ -116,13 +116,14 @@ and global Validation item is resolved or explicitly transferred to a named
 tracked objective. Record the actual accepted outcomes, settle owned obligations
 and use the normal worktree finalization flow; a merged child is insufficient.
 
-**Now:** reserve the fresh baseline's original command owner before the complete
-receiver publishes any UV launchers. The eighth hosted attempt passed the
-corrected owner context, then the ownership guard refused incoming commands
-without an incumbent reservation. The fixture now uses the existing native
-lifecycle wrapper rather than weakening that guard. Settlement left no fixture
-tasks or processes. Another native attempt remains held until focused validation,
-fresh review and required CI pass; no update or adoption pass is inferred.
+**Now:** qualify the authentic legacy consumer after correcting its optional
+resident observation. The ninth hosted attempt completed both Main application
+installations, then failed while opening a published resident PID that had
+already disappeared. The fixture records that specific observation race without
+claiming liveness; access failures and actual command/readiness checks remain
+blocking. Settlement left no fixture tasks or processes. Another native attempt
+remains held until focused validation, fresh review and required CI pass; no
+update, survival or adoption pass is inferred.
 
 **Return:** after this bounded fixture slice, select the next unmet criterion
 from the complete Plan and global Validation Plan, retaining the addressed-suite,

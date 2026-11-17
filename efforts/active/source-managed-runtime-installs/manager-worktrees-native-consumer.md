@@ -268,6 +268,38 @@ finishing this fixture cannot finalize the parent worktrees.
 
 ## Journal
 
+### 2026-11-17 - Record an exited resident without claiming liveness
+
+[Run 44027590695](https://github.com/ThomasMichon/copilot-extensions/actions/runs/44027590695),
+attempt 1, selected reviewed fixture
+`f2a18a933f6d60a518495c512810bdde30f76651` through protected controller
+`9dcbfd76033938d915378aa9fba0a7074b8c9ab7`, retaining the same frozen runtime
+pair and original bounds. Required CI passed and the exact-head review had no
+open findings. Both complete Main application installations returned success.
+The subsequent Manager runtime import probe also succeeded, but opening the
+published resident PID failed with Windows error 87 before command capture or
+the ordinary update. This ninth attempt remains failed, not qualified.
+
+The resident snapshot is informational, not installation-survival acceptance.
+The fixture now records a positive routed PID that disappears before process
+observation as `exited-before-observation`, without creation-time or liveness
+credit. A process handle reporting an exited process produces the same explicit
+diagnostic. Missing routes remain absent; invalid identities, access denial and
+other unexpected process errors still fail. No daemon is started to make this
+observation pass, and the actual command, physical-generation, update, durable
+data and settlement assertions are unchanged.
+
+All 26 contained controls pass, including the exited-route regression and an
+access-denied negative. Strict Python 3.10 Linux/Windows typing covers seven
+files and focused lint passes. The hosted-result-only assertion is deliberately
+excluded from this contained run; it requires actual preparation and exercise
+on its existing disposable owner. Another native attempt remains held pending
+fresh review and required CI for the correction.
+
+Validated settlement reports no errors, remaining tasks or remaining processes.
+Preparation failed and exercise did not run. No native startup, ordinary update,
+survival or installed-adoption credit is inferred; the parent remains Active.
+
 ### 2026-11-17 - Fresh baseline requires the original pre-write lifecycle reservation
 
 [Run 44014505743](https://github.com/ThomasMichon/copilot-extensions/actions/runs/44014505743),

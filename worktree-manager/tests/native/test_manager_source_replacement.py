@@ -480,6 +480,38 @@ def test_configuration_only_creates_an_index_host_when_declared(
     assert set(settings["enabledPlugins"]) == {name + "@copilot-extensions" for name in declared}
 
 
+def test_exited_resident_route_is_diagnostic_not_liveness_credit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(native, "_record", lambda *_args: ({"pid": 1234}, 0))
+    error = OSError("the published resident has already exited")
+    setattr(error, "winerror", 87)
+
+    def vanished(_pid: int) -> Any:
+        raise error
+
+    monkeypatch.setattr(native, "closing_process", vanished)
+    observed = source._resident_observation(tmp_path, "worktree-manager")
+    assert observed is not None
+    assert observed == {"pid": 1234, "state": "exited-before-observation", "winerror": 87}
+    assert "created_ns" not in observed
+
+
+def test_resident_observation_does_not_hide_unavailable_process_access(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(native, "_record", lambda *_args: ({"pid": 1234}, 0))
+    error = OSError("access denied")
+    setattr(error, "winerror", 5)
+
+    def denied(_pid: int) -> Any:
+        raise error
+
+    monkeypatch.setattr(native, "closing_process", denied)
+    with pytest.raises(OSError, match="access denied"):
+        source._resident_observation(tmp_path, "worktree-manager")
+
+
 def test_source_prepare_refuses_local_native_effects(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
     with pytest.raises(RuntimeError, match="disposable GitHub-hosted Windows VM"):

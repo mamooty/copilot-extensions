@@ -226,6 +226,26 @@ def worktrees_frontdoors(case: Path, expected_python: Path) -> dict[str, Any]:
     return rows
 
 
+def _resident_observation(root: Path, name: str) -> dict[str, Any] | None:
+    try:
+        marker, _ = native._record(root, name)
+    except FileNotFoundError:
+        return None
+    pid = marker["pid"]
+    if type(pid) is not int or pid <= 0:
+        raise RuntimeError(f"{name}: resident route has no positive process identity")
+    try:
+        with native.closing_process(pid) as process:
+            created, _exited, code = process.times()
+    except OSError as error:
+        if getattr(error, "winerror", None) != 87:
+            raise
+        return {"pid": pid, "state": "exited-before-observation", "winerror": 87}
+    if code == 259:
+        return {"pid": pid, "created_ns": created}
+    return {"pid": pid, "state": "exited-before-observation", "exit_code": code}
+
+
 def _capture(case: Path) -> dict[str, Any]:
     result: dict[str, Any] = {"applications": {}, "resident_observations": {}}
     for name, module in (("worktree-manager", "worktree_manager"), ("agent-worktrees", "agent_worktrees")):
@@ -253,14 +273,9 @@ def _capture(case: Path) -> dict[str, Any]:
             "generation": generation, "slot": str(slot), "origin": origin,
             "application": native._read(slot / "application.json"),
         }
-        try:
-            marker, _ = native._record(root, name)
-        except FileNotFoundError:
-            continue
-        with native.closing_process(marker["pid"]) as process:
-            created, _exited, code = process.times()
-        if code == 259:
-            result["resident_observations"][name] = {"pid": marker["pid"], "created_ns": created}
+        observation = _resident_observation(root, name)
+        if observation is not None:
+            result["resident_observations"][name] = observation
     commands = {"agent-worktrees": worktrees_frontdoors(
         case, Path(result["applications"]["agent-worktrees"]["origin"]["executable"]),
     )}
