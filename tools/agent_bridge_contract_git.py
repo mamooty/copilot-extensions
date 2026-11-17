@@ -48,7 +48,7 @@ def _read_batch(queries: list[str]) -> Iterable[tuple[str, str | None, str | Non
         input=("\n".join(queries) + "\n").encode("utf-8"),
         capture_output=True, check=True, env=clean_git_environment(),
         timeout=_LOCAL_GIT_TIMEOUT,
-        creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
+        creationflags=getattr(subprocess, "CREATE_NO_WINDOW") if sys.platform == "win32" else 0,
     )
     stream = io.BytesIO(result.stdout)
     for query in queries:
@@ -100,16 +100,16 @@ def prefetch_sources(sources: Iterable[tuple[str, str, str]]) -> None:
     _SOURCE_BLOBS.clear()
     _SOURCE_CONTENTS.clear()
     grouped: dict[str, set[str]] = {}
-    objects = set()
-    for commit, path, blob in sources:
-        if not _GIT_OBJECT_RE.fullmatch(commit) or not _GIT_OBJECT_RE.fullmatch(blob):
+    objects: set[str] = set()
+    for commit, path, expected_blob in sources:
+        if not _GIT_OBJECT_RE.fullmatch(commit) or not _GIT_OBJECT_RE.fullmatch(expected_blob):
             raise ValueError("Invalid provenance id in local evidence batch")
         if not isinstance(path, str) or not path or any(char in path for char in "\r\n\0"):
             raise ValueError("Invalid provenance path in local evidence batch")
         grouped.setdefault(commit, set()).add(path)
-        objects.update((commit, blob))
+        objects.update((commit, expected_blob))
     prefetch_objects(objects)
-    queries = {}
+    queries: dict[str, tuple[str, str]] = {}
     for commit, selected in sorted(grouped.items()):
         paths = sorted(selected | {_MANIFEST})
         _SOURCE_BLOBS.update(((commit, path), None) for path in paths)
@@ -137,7 +137,7 @@ def require_local_object_reads() -> None:
     result = subprocess.run(
         ["git", "--version"], capture_output=True, text=True, check=True,
         env=clean_git_environment(), timeout=_LOCAL_GIT_TIMEOUT,
-        creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
+        creationflags=getattr(subprocess, "CREATE_NO_WINDOW") if sys.platform == "win32" else 0,
     )
     match = re.search(r"\b(\d+)\.(\d+)(?:\.(\d+))?", result.stdout)
     if match is None or tuple(map(int, match.groups(default="0"))) < (2, 45, 0):
@@ -185,7 +185,7 @@ def git(*args: str) -> subprocess.CompletedProcess[str]:
         check=False,
         env=clean_git_environment(),
         timeout=_LOCAL_GIT_TIMEOUT,
-        creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
+        creationflags=getattr(subprocess, "CREATE_NO_WINDOW") if sys.platform == "win32" else 0,
     )
 
 
@@ -221,7 +221,7 @@ def git_file_sha256(commit: str, path: str) -> str | None:
         check=False,
         env=clean_git_environment(),
         timeout=_LOCAL_GIT_TIMEOUT,
-        creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
+        creationflags=getattr(subprocess, "CREATE_NO_WINDOW") if sys.platform == "win32" else 0,
     )
     if result.returncode != 0:
         return None
@@ -242,7 +242,7 @@ def blob_sha256(blob: str) -> str | None:
         check=False,
         env=clean_git_environment(),
         timeout=_LOCAL_GIT_TIMEOUT,
-        creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
+        creationflags=getattr(subprocess, "CREATE_NO_WINDOW") if sys.platform == "win32" else 0,
     )
     if result.returncode != 0:
         return None

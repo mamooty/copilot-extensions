@@ -6425,7 +6425,7 @@
         "plugins/agent-vault/src/agent_vault/attachment_export_cli.py": "99af98466902e71c1afaca751d4bd8a87be14e0c201dae199e28f7b7104bf6bc",
         "tools/promotion_unit_tests/test_vault_export_consumer.py": "434f4b5e553b03a1723db32256a5021b3d25e42f4f5525872a696d5df476bcce",
         "tools/promotion_unit_tests/vault_export_model.py": "4044e54eede55e6a13835b673a066b275ed29a15930e8cfeffb7eeca78ed93d2",
-        "tools/agent_bridge_contract_git.py": "aa2b95afbb1512c968d2945f5c993dd8fb41d60dee8dcc018977e547929163b7",
+        "tools/agent_bridge_contract_git.py": "324480b6d087b70ddb1beeb46fcc2ba8d5d0c5aecbf9c90e9847b708547106b3",
         "tools/promotion_unit_tests/test_bridge_contract_git.py": "90e66bfdc4bad7b72bf12d7cc4b25f1398b9ff1b226f829637c420347f5e0977"
     }
 }
