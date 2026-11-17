@@ -732,7 +732,7 @@ def check_project(
             ordered_imports.insert(0, str(view.output.parent))
         for entry in tuple(file for file in files if file.endswith((
             "/installation_context.py", "/_installation_context.py",
-        ))):
+        )) and file in all_paths):
             if entry == INSTALLATION_ENTRY:
                 continue
             prefix = entry.rsplit("/", 1)[0] + "/"

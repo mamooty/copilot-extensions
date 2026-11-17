@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+import os
+from pathlib import Path, WindowsPath
+import subprocess
+from types import SimpleNamespace
 
 import pytest
 
 from tools import typecheck
 from tools.typecheck_new_code import select_new_code
-from tools.typecheck_source_views import SourceViewError, setup_program_view
+from tools.typecheck_source_views import INSTALLATION_ENTRY, SourceViewError, setup_program_view
 
 
 @pytest.mark.parametrize("level", ["pending", "basic", "strict"])
@@ -100,6 +103,77 @@ def test_new_code_copied_fragment_selects_its_complete_owned_program(
     assert select_new_code(tmp_path, dict.fromkeys(files, project), (selected,)) == {
         project.name: files[:2],
     }
+
+
+@pytest.mark.parametrize("copied_entry", ["installation_context.py", "_installation_context.py"])
+def test_checker_composes_canonical_and_copied_installation_programs_once(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, copied_entry: str,
+) -> None:
+    root = tmp_path / "source"
+    canonical = Path(INSTALLATION_ENTRY).parent
+    inputs: list[str] = []
+    for source in sorted((typecheck.ROOT / canonical).glob("*.py")):
+        if source.name != "installation_context.py" and not source.name.startswith("_installation_context_"):
+            continue
+        for directory, name in (
+            (canonical, source.name),
+            (Path("consumer"), copied_entry if source.name == "installation_context.py" else source.name),
+        ):
+            relative = directory / name
+            destination = root / relative
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes(source.read_bytes())
+            inputs.append(relative.as_posix())
+    paths = tuple(inputs)
+    selected = tuple(path for path in paths if not path.endswith("_installation_context_worker.py"))
+    environment = tmp_path / "environment"
+    environment.mkdir()
+    python = environment / "inert-python"
+    python.write_bytes(b"never execute this analyzer")
+    (environment / ".typecheck-prepared").write_bytes(b"fixture\n")
+    events: list[str] = []
+
+    class Lease:
+        def release(self) -> None:
+            events.append("released")
+
+    class ForwardSlashWindowsPath(WindowsPath):
+        def __str__(self) -> str:
+            return super().__str__().replace("\\", "/")
+
+    source_views = typecheck._SourceViews
+
+    def posix_spelled_views(root: Path, stage: Path) -> typecheck._SourceViews:
+        if os.name == "nt":
+            stage = ForwardSlashWindowsPath(stage)
+        return source_views(root, stage)
+
+    def run(
+        argv: list[str], source_root: Path, *, env: dict[str, str],
+    ) -> subprocess.CompletedProcess[str]:
+        assert source_root == root
+        targets = Path(argv[-1][1:]).read_text(encoding="utf-8").splitlines()
+        assert len(targets) == 2 and all(Path(target).is_file() for target in targets)
+        assert all("/" in target and "\\" not in target for target in targets)
+        assert sum(Path(target).name == "installation_context.py" for target in targets) == 1
+        assert all(Path(target).parent == Path(targets[0]).parent for target in targets)
+        assert Path(env["MYPYPATH"].split(os.pathsep)[0]) == Path(targets[0]).parent
+        events.append("checked")
+        return subprocess.CompletedProcess(argv, 0, "", "")
+
+    monkeypatch.setattr(typecheck, "environment_path", lambda *_args: (environment, "fixture"))
+    monkeypatch.setattr(typecheck, "environment_python", lambda _path: python)
+    monkeypatch.setattr(typecheck, "acquire_environment", lambda *_args: Lease())
+    monkeypatch.setattr(typecheck, "_SourceViews", posix_spelled_views)
+    monkeypatch.setattr(typecheck, "uuid4", lambda: SimpleNamespace(hex=""))
+    monkeypatch.setattr(typecheck, "_run", run)
+    project = typecheck.Project(
+        "sample", ("libs/installation-context", "consumer"), (),
+        "pending", "3.10", ("linux",), "requirements.txt",
+    )
+    assert typecheck.check_project(root, project, selected, all_paths=paths) == 0
+    assert events == ["checked", "released"]
+    assert not (tmp_path / "source-views-environment" / project.name).exists()
 
 
 @pytest.mark.parametrize(

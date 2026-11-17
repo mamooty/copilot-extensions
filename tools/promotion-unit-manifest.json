@@ -5263,7 +5263,9 @@
         "tools/promotion_unit_tests/test_typecheck_new_code.py::test_new_code_copied_fragment_selects_its_complete_owned_program[fragment-installation_context.py]",
         "tools/promotion_unit_tests/test_typecheck_new_code.py::test_new_code_copied_fragment_selects_its_complete_owned_program[fragment-_installation_context.py]",
         "tools/promotion_unit_tests/test_typecheck_new_code.py::test_independent_setup_view_refuses_changed_bound_program[source]",
-        "tools/promotion_unit_tests/test_typecheck_new_code.py::test_independent_setup_view_refuses_changed_bound_program[output]"
+        "tools/promotion_unit_tests/test_typecheck_new_code.py::test_independent_setup_view_refuses_changed_bound_program[output]",
+        "tools/promotion_unit_tests/test_typecheck_new_code.py::test_checker_composes_canonical_and_copied_installation_programs_once[installation_context.py]",
+        "tools/promotion_unit_tests/test_typecheck_new_code.py::test_checker_composes_canonical_and_copied_installation_programs_once[_installation_context.py]"
     ],
     "coverage_targets": [
         "plugins/agent-vault/src/agent_vault/config.py",
@@ -5964,7 +5966,7 @@
         "services/chat/src/agent_chat_service/store.py": "210dd9ed449a8a1a958323477298bbbbc0d0485e1182af2c43ea4ecd1860196c",
         "tools/_admission_protocol.py": "baa0c1a2af44616eedf02bf678c128fd3c07045bd8e5542d4fe8ece3df54dc21",
         "tools/cache_directory_paths.py": "31b3d122fcc46bc00415e0e7d8af837e5ec64624654230b75d599a75ca8b400f",
-        "tools/typecheck.py": "17de032878715015505d60d429213dbfa92e8d8515bd372dcb45f991c18e88a7",
+        "tools/typecheck.py": "bbb6a98f24bc91b51e0151347e97a96c918058cf7296708778647e89fb12e08b",
         "tools/typecheck_source_views.py": "b3e954e624a4742895eaf782f819b1b89dcb206deb56796cf8b428d8b9591a32",
         "tools/promotion_unit_tests/test_typecheck.py": "8ce4a807734345fd4665a15a75cfb6087a85878d445b958317fb42dcf5c431fe",
         "tools/promotion_unit_tests/test_typecheck_emitted.py": "3a92fd3fed6c7db24c133e29c20578c6fa9f806f9ea55786f5e69fa16a0452bd",
@@ -6427,7 +6429,7 @@
         "libs/agent-procutil/src/agent_procutil/python_cache_files.py": "2c80c32a7dd39251912dd33eb7a3d83901c7987f792e1b5fb773014c5981f024",
         "libs/agent-procutil/src/agent_procutil/python_cache_pyc.py": "1eaf3c6cbfc9e8d58466f2df6bc11556781a1febd5a240b16d4b061a7828f294",
         "libs/agent-procutil/tests/python_cache_pyc_fixtures.py": "39a73b0501d0cdd8eebc49d8a9ed31bcc5e1689f5b26ac405552ac59f5393385",
-        "tools/promotion_unit_tests/test_typecheck_new_code.py": "ed5018d0524f2283aa63eedbb068bc1fe1e8d23daf5b1815acd79d4dc056e03e",
+        "tools/promotion_unit_tests/test_typecheck_new_code.py": "3c1fda470e6ef509663a6e4104362d85d6e4e302082e47896804052cb051a4ee",
         "tools/typecheck_new_code.py": "987d264ea9b890ed540b3ed9de7820bd5a3e8c07b4d92d061e78ccf9f812e226"
     }
 }
