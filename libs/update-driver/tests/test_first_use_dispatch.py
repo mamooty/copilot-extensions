@@ -354,26 +354,32 @@ def test_dispatch_native_installer_admission_joins_original_queue(
         assert not (installation.parent / ".copilot-extensions/update-driver").exists()
 
 
-@pytest.mark.skipif(os.name == "nt", reason="POSIX fixture tool symlinks")
-def test_dispatch_systemctl_adapter_does_not_follow_the_cold_tool_symlink(
-    area: Path, monkeypatch: pytest.MonkeyPatch,
+@pytest.mark.parametrize("link_kind", ["hardlink", "symlink"])
+def test_dispatch_systemctl_adapter_preserves_the_link_target(
+    area: Path, link_kind: str,
 ) -> None:
+    if link_kind == "symlink" and os.name == "nt":
+        pytest.skip("POSIX fixture symlink; hardlink control exercises replacement on Windows")
     host_tool = area / "host-systemctl"
     host_tool.write_bytes(b"untouched host tool\n")
     adapter = area / "native-tools"
     adapter.mkdir()
-    (adapter / "systemctl").symlink_to(host_tool)
-    payload = area / "payload"
-    main = payload / "src/agent_dispatch/__main__.py"
-    main.parent.mkdir(parents=True)
-    main.write_text('if __name__ == "__main__":\n    pass\n', encoding="utf-8")
-    monkeypatch.setattr(shutil, "which", lambda _name: str(host_tool))
-    dispatch_effect_adapter(payload, {"PATH": str(adapter)})
+    if link_kind == "hardlink":
+        os.link(host_tool, adapter / "systemctl")
+    else:
+        (adapter / "systemctl").symlink_to(host_tool)
+    replace_systemctl_adapter(adapter)
     assert host_tool.read_bytes() == b"untouched host tool\n"
     assert not (adapter / "systemctl").is_symlink()
     assert (adapter / "systemctl").read_bytes() == (
         Path(__file__).parent / "fixtures/dispatch-systemctl.sh"
     ).read_bytes()
+
+
+def replace_systemctl_adapter(adapter: Path) -> None:
+    (adapter / "systemctl").unlink(missing_ok=True)
+    shutil.copyfile(Path(__file__).parent / "fixtures/dispatch-systemctl.sh", adapter / "systemctl")
+    (adapter / "systemctl").chmod(0o700)
 
 
 def dispatch_effect_adapter(payload: Path, env: dict[str, str]) -> Path:
@@ -389,9 +395,7 @@ def dispatch_effect_adapter(payload: Path, env: dict[str, str]) -> Path:
             executable = shutil.which(name)
             assert executable, f"native installer requires {name}"
             (adapter / name).symlink_to(executable)
-        (adapter / "systemctl").unlink(missing_ok=True)
-        shutil.copyfile(fixtures / "dispatch-systemctl.sh", adapter / "systemctl")
-        (adapter / "systemctl").chmod(0o700)
+        replace_systemctl_adapter(adapter)
     main = payload / "src/agent_dispatch/__main__.py"
     body = main.read_text(encoding="utf-8")
     seam = 'if __name__ == "__main__":\n'
