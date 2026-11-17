@@ -5219,7 +5219,10 @@ an unavailable legacy payload. Ordinary help fronts are checked while their
 own source remains available.
 
 Task/unit registration and the Windows installer's otherwise auto-starting
-health probe use explicitly synthetic, isolated effects. The source-only health
+health/deploy probes use explicitly synthetic, isolated effects. The fixture
+explicitly enables compatibility task registration; the task remains Ready
+while the separate deploy probe supplies synthetic readiness. It never uses
+task execution as startup proof. The source-only health
 adapter is applied before acceptance and construction, never to a completed
 slot; actual CLI help remains unchanged. Inspect S4U/startup coordinator
 registration and the label-free disabled supervisor on Windows, and the real

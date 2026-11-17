@@ -11,6 +11,7 @@ import subprocess
 import sys
 from types import ModuleType
 from typing import Protocol, cast
+import zipfile
 
 import pytest
 from packaging.version import Version
@@ -334,14 +335,15 @@ def dispatch_effect_adapter(payload: Path, env: dict[str, str]) -> Path:
     assert body.count(seam) >= 1
     # Change the fixture source before acceptance, never a built or completed slot.
     synthetic = (
-        "    if sys.argv[1:] == ['--local', 'health']:\n"
+        "    if sys.argv[1:] in (['--local', 'health'], ['--local', 'deploy', '--json']):\n"
         f"        _effects = Path({str(adapter)!r})\n"
         "        _task = _effects / 'agent-dispatch.json'\n"
         "        if os.name == 'nt' and (not _task.is_file() or "
-        "json.loads(_task.read_text(encoding='utf-8-sig'))['State'] != 'Running'):\n"
+        "json.loads(_task.read_text(encoding='utf-8-sig'))['State'] not in {'Ready', 'Running'}):\n"
         "            raise SystemExit(97)\n"
         "        with (_effects / 'effects.jsonl').open('a', encoding='utf-8') as _out:\n"
-        "            _out.write(json.dumps({'operation': 'synthetic-health'}) + '\\n')\n"
+        "            _out.write(json.dumps({'operation': 'synthetic-deploy' "
+        "if sys.argv[2] == 'deploy' else 'synthetic-health'}) + '\\n')\n"
         "        from . import __version__\n"
         "        print(json.dumps({'version': __version__, 'fixture': True}))\n"
         "        raise SystemExit(0)\n"
@@ -362,7 +364,7 @@ def assert_dispatch_registration(installation: Path, adapter: Path) -> None:
     if os.name == "nt":
         coordinator = json.loads((adapter / "agent-dispatch.json").read_text(encoding="utf-8-sig"))
         supervisor = json.loads((adapter / "agent-dispatch-supervisor.json").read_text(encoding="utf-8-sig"))
-        assert coordinator["State"] == "Running"
+        assert coordinator["State"] == "Ready"
         assert coordinator["Principal"]["LogonType"] == "S4U"
         assert [item["AtStartup"] for item in coordinator["Triggers"]] == [True, False]
         assert [item["AtLogOn"] for item in coordinator["Triggers"]] == [False, True]
@@ -375,9 +377,9 @@ def assert_dispatch_registration(installation: Path, adapter: Path) -> None:
             assert task["Settings"]["RestartCount"] == 3
             assert task["Settings"]["RestartSeconds"] == 60
             assert task["Settings"]["LimitSeconds"] == 0
-        assert {"operation": "start", "detail": "agent-dispatch"} in effects
+        assert {"operation": "start", "detail": "agent-dispatch"} not in effects
         assert {"operation": "disable", "detail": "agent-dispatch-supervisor"} in effects
-        assert {"operation": "synthetic-health"} in effects
+        assert {"operation": "synthetic-deploy"} in effects
     else:
         units = installation.parent / ".config/systemd/user"
         coordinator = (units / "agent-dispatch.service").read_text()
@@ -404,7 +406,7 @@ def dispatch_native_setup(
     materialized_dispatch: OwningPayload, area: Path,
 ) -> tuple[dict[str, str], Path, dict[Path, bytes], Path, Diagnostic, list[str]]:
     payload, installation, project = materialized_dispatch
-    inputs = area / "foundation-source"
+    inputs = area / "foundation-source" / "libs"
     for name in PACKAGES:
         shutil.copytree(REPOSITORY / "libs" / name, inputs / name, ignore=lambda _path, names: {
             name for name in names if name in GENERATED
@@ -413,6 +415,14 @@ def dispatch_native_setup(
     build_bridge_native_test_assets(payload, inputs / "agent-procutil")
     env = cold_environment(installation, project, area)
     env.pop("AGENT_VAULT_HOME")
+    if os.name == "nt":
+        installation.mkdir()
+        (installation / "installation.json").write_text(json.dumps({
+            "version": 1,
+            "installation": {
+                "root": str(installation), "local": {"windows_scheduled_task": "enabled"},
+            },
+        }), encoding="utf-8")
     adapter = dispatch_effect_adapter(payload, env)
     before = {path: path.read_bytes() for path in payload.rglob("*") if path.is_file()}
     root = installation.parent / ".copilot-extensions/update-driver"
@@ -421,6 +431,21 @@ def dispatch_native_setup(
         root, payload, installation, project, source=inputs / "update-driver",
     ) + (["-Wait"] if os.name == "nt" else ["--wait"])
     return env, adapter, before, root, diagnostic, command
+
+
+def test_dispatch_copied_foundation_supplies_the_actual_lifecycle_archive(
+    materialized_dispatch: OwningPayload, area: Path,
+) -> None:
+    import io
+
+    assets = runpy.run_path(str(REPOSITORY / "tools/daemon_lifecycle_assets.py"))
+    lifecycle_archive = cast(Callable[[Path], bytes], assets["lifecycle_archive"])
+    dispatch_native_setup(materialized_dispatch, area)
+    with zipfile.ZipFile(io.BytesIO(lifecycle_archive(area / "foundation-source"))) as archive:
+        assert {
+            "agent_procutil/_daemon_instance_cli.py", "agent_procutil/_daemon_instance_store.py",
+            "agent_procutil/_daemon_instance_io.py",
+        } <= set(archive.namelist())
 
 
 def assert_dispatch_consumers(
