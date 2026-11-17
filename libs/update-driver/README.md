@@ -1024,9 +1024,15 @@ remain bound to the same request. Foreign execution/routing hints cannot select
 another operation, runtime, coordinator or configuration. Snapshot/copy sources,
 cells/custom roots, compound actions and nested submissions refuse before
 acquisition or queue/plugin writes.
+Explicit `AGENT_DISPATCH_INSTALLATION_CONFIG` selectors are outside this fixed
+default-root recipe and refuse in every admission front. Accepted requests
+clear an unrelated worker's selector; the default installation policy remains
+owned by the addressed installation. Windows provisioning passes the original
+live custody witness through the real native installer driver rather than
+submitting a second request.
 The manual `dispatch-recipes` portfolio qualifies real cold construction and
 installed module/distribution/help consumers, original caller Job/group loss,
-and synthetic isolated task/unit effects. The Windows source-only health
+and synthetic isolated task/unit effects. The Windows source-only health/deploy
 protocol is adapted before acceptance, never after immutable completion;
 it does not prove live coordinator serving. Ordinary command/bootstrap
 publishers, selected snapshots, explicit installers, scoped publication,

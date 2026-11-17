@@ -5211,7 +5211,8 @@ follower is submitted. Module/distribution identity and the real payload and
 ordinary installed help consumers are checked against the completed slot.
 Separate native packets cover equivalent concurrent callers, healthy immutable
 reuse, preservation across a failed new candidate, unavailable accepted source,
-and an explicitly tolerated supervisor-disable failure with visible diagnostics.
+and visible supervisor-effect failures. Explicit Windows registration failure
+produces a failed receipt; Linux retains its native tolerated-disable outcome.
 Safe consumers retain unrelated failed/pending queue history.
 Source-loss qualification invokes the already-selected installed runtime
 directly; it does not claim that the unchanged primary publisher can resolve
@@ -5226,7 +5227,9 @@ task execution as startup proof. The source-only health
 adapter is applied before acceptance and construction, never to a completed
 slot; actual CLI help remains unchanged. Inspect S4U/startup coordinator
 registration and the label-free disabled supervisor on Windows, and the real
-generated user units plus intercepted systemctl operations on Linux. No host
+generated user units plus intercepted systemctl operations on Linux. The adapter
+replaces only the fixture's systemctl symlink, never its target. A separate
+regression proves the target bytes remain unchanged. No host
 task, unit, registry entry, firewall rule or coordinator daemon is created.
 Linux retains native compilation tools but exposes no host Python or UV.
 Acknowledged owners, foundation, queue and kernel custody settle before cleanup.

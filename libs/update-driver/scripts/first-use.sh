@@ -110,7 +110,7 @@ if [[ "$plugin" == agent-bridge || "$plugin" == agent-dispatch ]]; then
     own_helpers=(repair-scheduled-task.ps1)
     if [[ "$plugin" == agent-dispatch ]]; then
         own_helpers=(installer-instance-reconcile.ps1 installer-instance-reconcile.sh
-            installer_instance_reconcile.py installer_engine_health.py
+            installer_instance_reconcile.py installer_engine_health.py installer_retained_content.py
             installer_source_build.py installer_source_wheel_cache.py
             versioned_runtime_cache.py daemon_instance_runtime.pyz
             source-runtime.ps1 source-runtime.sh supervisor-lifecycle.ps1 base-python.ps1
@@ -121,6 +121,14 @@ if [[ "$plugin" == agent-bridge || "$plugin" == agent-dispatch ]]; then
             printf '%s first use requires its complete materialized installation helpers.\n' "$label" >&2; exit 1;
         }
     done
+    if [[ "$plugin" == agent-dispatch ]]; then
+        [[ -f "$payload/src/agent_dispatch/windows-scheduling.ps1" ]] || {
+            printf 'Dispatch first use requires its complete materialized installation helpers.\n' >&2; exit 1;
+        }
+        [[ ! -v AGENT_DISPATCH_INSTALLATION_CONFIG ]] || {
+            printf 'Dispatch first use requires its default installation policy.\n' >&2; exit 1;
+        }
+    fi
 fi
 if [[ "$plugin" == agent-mcp ]]; then
     [[ "$(query_type "$manifest" installerLifecycle)" == boolean &&

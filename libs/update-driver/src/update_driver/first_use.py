@@ -86,6 +86,7 @@ DISPATCH_CONTEXT_KEYS = (
     "AGENT_DISPATCH_HOME", "AGENT_DISPATCH_INSTALLATION_ID",
     "AGENT_DISPATCH_NO_SELFPROVISION", "AGENT_DISPATCH_PINNED_CONTEXT",
     "AGENT_DISPATCH_ALLOW_DOWNGRADE", "AGENT_DISPATCH_WSL_WINDOWS_CLIENT",
+    "AGENT_DISPATCH_INSTALLATION_CONFIG",
 )
 BRIDGE_HELPERS = (
     "installer-engine.ps1", "installer-engine.sh",
@@ -130,6 +131,7 @@ DISPATCH_HELPERS = (
     "versioned_runtime_publication.py", "versioned_runtime_leases.py",
     "versioned_runtime_cache.py", "daemon_instance_runtime.pyz",
     "installer-instance-reconcile.ps1", "installer-instance-reconcile.sh", "installer_instance_reconcile.py",
+    "installer_retained_content.py",
     "source-runtime.ps1", "source-runtime.sh", "supervisor-lifecycle.ps1", "base-python.ps1",
     "runtime-gate.ps1", "runtime-gate.sh", "resolve-runtime.ps1", "resolve-runtime.sh",
 )
@@ -252,8 +254,13 @@ def _inspect_payload(
     ):
         raise ProvisionError("MCP first use requires its native installer lifecycle and CMD catalog")
     if plugin == "agent-dispatch":
-        if any(not (scripts / name).is_file() for name in DISPATCH_HELPERS):
+        if (
+            any(not (scripts / name).is_file() for name in DISPATCH_HELPERS)
+            or not (payload / "src/agent_dispatch/windows-scheduling.ps1").is_file()
+        ):
             raise ProvisionError("Dispatch first use requires its complete materialized installation helpers")
+        if "AGENT_DISPATCH_INSTALLATION_CONFIG" in os.environ:
+            raise ProvisionError("Dispatch first use requires its default installation policy")
         if manifest.get("installerLifecycle") is not True or manifest.get("windowsCatalogShim") != "cmd":
             raise ProvisionError("Dispatch first use requires its native lifecycle and CMD catalog declaration")
     if plugin == "agent-bridge" and sys.platform.startswith("linux"):
@@ -544,6 +551,8 @@ def _execute(admission: dict[str, Any], *, root: Path, client_only: bool = False
             return 1
         custody.assert_owned()
         environment = _environment(payload)
+        if admission["plugin"] == "agent-dispatch":
+            environment.pop("AGENT_DISPATCH_INSTALLATION_CONFIG", None)
         # This trusted adapter, not ambient caller hints, attests the copied
         # source after queue authentication and full before/after verification.
         environment["COPILOT_PLUGIN_INSTALL_STAGED"] = "1"
@@ -553,7 +562,9 @@ def _execute(admission: dict[str, Any], *, root: Path, client_only: bool = False
         environment["PATH"] = os.pathsep.join(filter(None, (
             str(Path(sys.executable).parent), environment.get("PATH"),
         )))
-        if os.name == "nt" and admission["plugin"] in {"agent-mcp", "agent-vault"} and installer_action == "provision":
+        if os.name == "nt" and admission["plugin"] in {
+            "agent-mcp", "agent-vault", "agent-dispatch",
+        } and installer_action == "provision":
             environment.update(participant_environment())
             environment["COPILOT_EXTENSIONS_NATIVE_INSTALLER"] = admission["plugin"]
         code = _run_installer(

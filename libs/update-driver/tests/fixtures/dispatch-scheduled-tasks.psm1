@@ -38,7 +38,7 @@ function New-ScheduledTaskSettingsSet {
     )
     [pscustomobject]@{
         LimitSeconds = $ExecutionTimeLimit.TotalSeconds; MultipleInstances = $MultipleInstances
-        RestartCount = $RestartCount; RestartSeconds = $RestartInterval.TotalSeconds
+        RestartCount = $RestartCount; RestartSeconds = $RestartInterval.TotalSeconds; Enabled = $true
     }
 }
 
@@ -61,10 +61,18 @@ function Register-ScheduledTask {
     [CmdletBinding()]
     param([string]$TaskName, $Action, $Trigger, $Settings, $Principal, [string]$Description, [switch]$Force)
     $path = Task-Path $TaskName
+    $mode = Join-Path $PSScriptRoot 'mode'
+    if ($TaskName -eq 'agent-dispatch-supervisor' -and
+        (Test-Path -LiteralPath $mode) -and
+        (Get-Content -LiteralPath $mode -Raw) -eq 'supervisor-registration-denied') {
+        Write-Effect 'supervisor-registration-denied' $TaskName
+        throw [UnauthorizedAccessException]::new('fixture supervisor registration denied')
+    }
     Write-Effect 'register' $TaskName
     @{
         TaskName = $TaskName; Actions = @($Action); Triggers = @($Trigger)
-        Settings = $Settings; Principal = $Principal; State = 'Ready'
+        Settings = $Settings; Principal = $Principal
+        State = $(if ($Settings.Enabled) { 'Ready' } else { 'Disabled' })
     } | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $path -Encoding UTF8
 }
 

@@ -95,7 +95,7 @@ if ($plugin -cin @('agent-bridge', 'agent-dispatch')) {
     }
     $ownHelpers = if ($plugin -ceq 'agent-bridge') { @('repair-scheduled-task.ps1') } else {
         @('installer-instance-reconcile.ps1', 'installer-instance-reconcile.sh',
-          'installer_instance_reconcile.py', 'installer_engine_health.py',
+          'installer_instance_reconcile.py', 'installer_engine_health.py', 'installer_retained_content.py',
           'installer_source_build.py', 'installer_source_wheel_cache.py',
           'versioned_runtime_cache.py', 'daemon_instance_runtime.pyz',
           'source-runtime.ps1', 'source-runtime.sh', 'supervisor-lifecycle.ps1', 'base-python.ps1',
@@ -104,6 +104,14 @@ if ($plugin -cin @('agent-bridge', 'agent-dispatch')) {
     foreach ($helper in $ownHelpers) {
         if (-not [IO.File]::Exists((Join-Path $Payload "scripts\$helper"))) {
             throw "$label first use requires its complete materialized installation helpers."
+        }
+        if ($plugin -ceq 'agent-dispatch') {
+            if (-not [IO.File]::Exists((Join-Path $Payload 'src\agent_dispatch\windows-scheduling.ps1'))) {
+                throw 'Dispatch first use requires its complete materialized installation helpers.'
+            }
+            if (Test-Path Env:AGENT_DISPATCH_INSTALLATION_CONFIG) {
+                throw 'Dispatch first use requires its default installation policy.'
+            }
         }
     }
 }

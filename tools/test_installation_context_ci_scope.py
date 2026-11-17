@@ -2251,14 +2251,14 @@ def test_dispatch_recipes_keep_literal_native_runners_and_bounded_packets(
         "cold-original": "test_first_use_dispatch.py",
         "concurrent": "test_first_use_dispatch.py",
         "reuse-failed-source": "test_first_use_dispatch.py",
-        "tolerated-supervisor": "test_first_use_dispatch.py",
+        "supervisor-failure": "test_first_use_dispatch.py",
         "bridge-python-refusals": "test_first_use_bridge.py",
         "bridge-native-refusals": "test_first_use_bridge.py",
         "bridge-recipe-controls": "test_first_use_bridge.py",
     }
     policy = (
         "(client-only or no-self or pinned or managed or malformed or custom-root "
-        "or cell or nested or dispatcher or module)"
+        "or cell or installation-policy or nested or dispatcher or module)"
     )
     assert {item["name"]: item["select"] for item in packets} == {
         "python-refusals": "refusal and python-api",
@@ -2269,7 +2269,7 @@ def test_dispatch_recipes_keep_literal_native_runners_and_bounded_packets(
         "cold-original": "original_provision",
         "concurrent": "actual and concurrent",
         "reuse-failed-source": "reuse_failed",
-        "tolerated-supervisor": "tolerated_supervisor",
+        "supervisor-failure": "supervisor_effect_failure",
         "bridge-python-refusals": "refusal and False",
         "bridge-native-refusals": "refusal and True",
         "bridge-recipe-controls": "not refusal and not actual",

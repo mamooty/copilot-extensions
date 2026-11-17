@@ -1006,10 +1006,10 @@ jobs:
             select: refusal and python-api
           - name: native-policy-refusals
             file: test_first_use_dispatch.py
-            select: refusal and native-front and (client-only or no-self or pinned or managed or malformed or custom-root or cell or nested or dispatcher or module)
+            select: refusal and native-front and (client-only or no-self or pinned or managed or malformed or custom-root or cell or installation-policy or nested or dispatcher or module)
           - name: native-source-refusals
             file: test_first_use_dispatch.py
-            select: refusal and native-front and not (client-only or no-self or pinned or managed or malformed or custom-root or cell or nested or dispatcher or module)
+            select: refusal and native-front and not (client-only or no-self or pinned or managed or malformed or custom-root or cell or installation-policy or nested or dispatcher or module)
           - name: recipe-controls
             file: test_first_use_dispatch.py
             select: not refusal and not actual
@@ -1025,9 +1025,9 @@ jobs:
           - name: reuse-failed-source
             file: test_first_use_dispatch.py
             select: reuse_failed
-          - name: tolerated-supervisor
+          - name: supervisor-failure
             file: test_first_use_dispatch.py
-            select: tolerated_supervisor
+            select: supervisor_effect_failure
           - name: bridge-python-refusals
             file: test_first_use_bridge.py
             select: refusal and False

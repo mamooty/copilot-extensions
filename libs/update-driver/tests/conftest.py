@@ -159,9 +159,9 @@ def owning_payload(owning_context: OwningPayload) -> OwningPayload:
         "param([string]$Action,[string]$InstallDir,[switch]$NoService)\n"
         "if ($Action -cnotin @('provision', 'stamp')) { exit 90 }\n"
         "$plugin = (Get-Content -Raw (Join-Path $PSScriptRoot '..\\plugin.json') | ConvertFrom-Json).name\n"
-        "if ($plugin -eq 'agent-vault' -and $Action -eq 'provision') {\n"
+        "if ($plugin -in @('agent-vault', 'agent-dispatch') -and $Action -eq 'provision') {\n"
         "if ($env:COPILOT_EXTENSIONS_COMMAND_LIFECYCLE -or -not $env:UPDATE_DRIVER_WITNESS -or "
-        "$env:COPILOT_EXTENSIONS_NATIVE_INSTALLER -cne 'agent-vault') { exit 91 }\n"
+        "$env:COPILOT_EXTENSIONS_NATIVE_INSTALLER -cne $plugin) { exit 91 }\n"
         "} else {\n"
         "if ($env:UPDATE_DRIVER_WITNESS -or $env:COPILOT_EXTENSIONS_COMMAND_LIFECYCLE) { exit 91 }\n"
         "}\n"
@@ -336,7 +336,8 @@ def owning_dispatch(owning_payload: OwningPayload) -> OwningPayload:
         },
     }), encoding="utf-8")
     controls = ("ACTION", "DRY_RUN", "FORCE", "PAYLOAD_ROOT", "VALIDATED_CONTEXT",
-                "CONFIG_DIR", "INSTALL_DIR", "ROUTING_DIR", "RUN_DIR", "COMMAND_MODULE")
+                "CONFIG_DIR", "INSTALL_DIR", "ROUTING_DIR", "RUN_DIR", "COMMAND_MODULE",
+                "INSTALLATION_CONFIG")
     windows = payload / "scripts/install.ps1"
     windows.write_text(windows.read_text().replace(
         "[switch]$NoService", "[switch]$Unsupported",
@@ -373,6 +374,11 @@ def owning_dispatch(owning_payload: OwningPayload) -> OwningPayload:
                 else "plugins/agent-dispatch/scripts"
             ) / name
             shutil.copyfile(source, path)
+    scheduling = payload / "src/agent_dispatch/windows-scheduling.ps1"
+    scheduling.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(
+        repository / "plugins/agent-dispatch/src/agent_dispatch/windows-scheduling.ps1", scheduling,
+    )
     return payload, installation.with_name(".agent-dispatch"), project
 
 

@@ -107,7 +107,8 @@ def test_dispatch_fixed_action_keeps_native_options_context_custody_and_result(
     assert request.id == repeated.id and not installation.exists()
     assert request.runner.context_keys == tuple(sorted(provision.DISPATCH_CONTEXT_KEYS))
     for key in ("ACTION", "DRY_RUN", "FORCE", "PAYLOAD_ROOT", "VALIDATED_CONTEXT", "NO_SELFPROVISION",
-                "CONFIG_DIR", "INSTALL_DIR", "ROUTING_DIR", "RUN_DIR", "COMMAND_MODULE"):
+                "CONFIG_DIR", "INSTALL_DIR", "ROUTING_DIR", "RUN_DIR", "COMMAND_MODULE",
+                "INSTALLATION_CONFIG"):
         monkeypatch.setenv("AGENT_DISPATCH_" + key, "foreign")
     monkeypatch.setenv("AGENT_DISPATCH_WSL_WINDOWS_CLIENT", "0" if submitted_wsl == "1" else "1")
     drain(root=root)
@@ -140,6 +141,7 @@ def test_dispatch_fixed_action_keeps_native_options_context_custody_and_result(
     "missing-supervisor", "missing-base",
     "missing-health", "missing-cache", "missing-daemon-runtime", "missing-reconcile-python",
     "missing-gate-ps1", "missing-gate-sh", "missing-resolver-ps1", "missing-resolver-sh",
+    "missing-retained", "missing-scheduling", "installation-policy",
 ])
 def test_dispatch_refusal_precedes_acquisition_queue_and_publication(
     owning_dispatch: OwningPayload, area: Path, monkeypatch: pytest.MonkeyPatch,
@@ -155,12 +157,13 @@ def test_dispatch_refusal_precedes_acquisition_queue_and_publication(
         payload = copied
     elif reason == "custom-root":
         installation = installation.with_name("other-dispatch")
-    elif reason in {"no-self", "pinned", "nested", "cell"}:
+    elif reason in {"no-self", "pinned", "nested", "cell", "installation-policy"}:
         monkeypatch.setenv({
             "no-self": "AGENT_DISPATCH_NO_SELFPROVISION",
             "pinned": "AGENT_DISPATCH_PINNED_CONTEXT",
             "nested": "UPDATE_DRIVER_WITNESS",
             "cell": "AGENT_DISPATCH_INSTALLATION_ID",
+            "installation-policy": "AGENT_DISPATCH_INSTALLATION_CONFIG",
         }[reason], "foreign")
     elif reason in {"managed", "malformed"}:
         module = primitive(payload)
@@ -173,6 +176,8 @@ def test_dispatch_refusal_precedes_acquisition_queue_and_publication(
             "owner": module._deployment_owner(resolution, arguments), "managed": True,
         } if reason == "managed" else {"version": 999}
         (installation / "runtime-deployment.json").write_text(json.dumps(policy), encoding="utf-8")
+    elif reason == "missing-scheduling":
+        (payload / "src/agent_dispatch/windows-scheduling.ps1").unlink()
     elif reason.startswith("missing-"):
         name = {
             "missing-helper": "versioned_runtime_publication.py",
@@ -189,6 +194,7 @@ def test_dispatch_refusal_precedes_acquisition_queue_and_publication(
             "missing-gate-sh": "runtime-gate.sh",
             "missing-resolver-ps1": "resolve-runtime.ps1",
             "missing-resolver-sh": "resolve-runtime.sh",
+            "missing-retained": "installer_retained_content.py",
         }[reason]
         (payload / "scripts" / name).unlink()
     elif reason in {"dispatcher", "module", "provision-mode", "lifecycle", "catalog"}:
@@ -314,6 +320,62 @@ def test_actual_dispatch_stamp_defers_construction_and_service_effects(
     assert {path: path.read_bytes() for path in payload.rglob("*") if path.is_file()} == before
 
 
+@pytest.mark.skipif(os.name != "nt", reason="actual Windows native installer admission")
+@pytest.mark.parametrize("default_root", [True, False])
+def test_dispatch_native_installer_admission_joins_original_queue(
+    materialized_dispatch: OwningPayload, area: Path, default_root: bool,
+) -> None:
+    payload, installation, project = materialized_dispatch
+    scripts = payload / "scripts"
+    (scripts / "installer-engine.ps1").write_text(
+        "function Ensure-Uv { param([string]$InstallRoot)\n"
+        "return (Get-Command python -CommandType Application).Source\n}\n",
+        encoding="utf-8",
+    )
+    (scripts / "install.ps1").write_text(
+        "param([string]$Action,[string]$InstallDir)\n$ErrorActionPreference = 'Stop'\n"
+        "if (-not $env:UPDATE_DRIVER_WITNESS) { throw 'missing native participant handoff' }\n"
+        ". (Join-Path $PSScriptRoot 'versioned_runtime_native.ps1')\n"
+        "$result = Enter-NativeInstallerDriver -Payload (Split-Path $PSScriptRoot) "
+        "-Root $InstallDir -Plugin agent-dispatch -Action $Action\n"
+        "if (-not $result.Participant -or $result.ExitCode -ne 0) {\n"
+        "  throw 'native installer admission did not join the original request'\n}\n"
+        "[IO.File]::WriteAllText((Join-Path $InstallDir 'native-admitted'), $Action)\n"
+        "exit 0\n", encoding="utf-8",
+    )
+    root = installation.parent / ".copilot-extensions/update-driver" if default_root else area / "queue"
+    request = provision.enqueue(payload, installation, project, root=root)
+    drain(root=root)
+    result = _request(request.id, root)
+    assert result.state == "completed" and result.exit_code == 0, result.log_path.read_text()
+    assert (installation / "native-admitted").read_text() == "provision"
+    assert [item.id for item in _requests(root)] == [request.id]
+    if not default_root:
+        assert not (installation.parent / ".copilot-extensions/update-driver").exists()
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX fixture tool symlinks")
+def test_dispatch_systemctl_adapter_does_not_follow_the_cold_tool_symlink(
+    area: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    host_tool = area / "host-systemctl"
+    host_tool.write_bytes(b"untouched host tool\n")
+    adapter = area / "native-tools"
+    adapter.mkdir()
+    (adapter / "systemctl").symlink_to(host_tool)
+    payload = area / "payload"
+    main = payload / "src/agent_dispatch/__main__.py"
+    main.parent.mkdir(parents=True)
+    main.write_text('if __name__ == "__main__":\n    pass\n', encoding="utf-8")
+    monkeypatch.setattr(shutil, "which", lambda _name: str(host_tool))
+    dispatch_effect_adapter(payload, {"PATH": str(adapter)})
+    assert host_tool.read_bytes() == b"untouched host tool\n"
+    assert not (adapter / "systemctl").is_symlink()
+    assert (adapter / "systemctl").read_bytes() == (
+        Path(__file__).parent / "fixtures/dispatch-systemctl.sh"
+    ).read_bytes()
+
+
 def dispatch_effect_adapter(payload: Path, env: dict[str, str]) -> Path:
     """Isolate OS registration and the installer's otherwise auto-starting health probe."""
     fixtures = Path(__file__).parent / "fixtures"
@@ -327,6 +389,7 @@ def dispatch_effect_adapter(payload: Path, env: dict[str, str]) -> Path:
             executable = shutil.which(name)
             assert executable, f"native installer requires {name}"
             (adapter / name).symlink_to(executable)
+        (adapter / "systemctl").unlink(missing_ok=True)
         shutil.copyfile(fixtures / "dispatch-systemctl.sh", adapter / "systemctl")
         (adapter / "systemctl").chmod(0o700)
     main = payload / "src/agent_dispatch/__main__.py"
@@ -378,7 +441,8 @@ def assert_dispatch_registration(installation: Path, adapter: Path) -> None:
             assert task["Settings"]["RestartSeconds"] == 60
             assert task["Settings"]["LimitSeconds"] == 0
         assert {"operation": "start", "detail": "agent-dispatch"} not in effects
-        assert {"operation": "disable", "detail": "agent-dispatch-supervisor"} in effects
+        assert supervisor["Settings"]["Enabled"] is False
+        assert {"operation": "register", "detail": "agent-dispatch-supervisor"} in effects
         assert {"operation": "synthetic-deploy"} in effects
     else:
         units = installation.parent / ".config/systemd/user"
@@ -611,29 +675,31 @@ def test_actual_dispatch_reuse_failed_candidate_and_unavailable_source_preserve_
 
 
 @native_genesis
-def test_actual_dispatch_tolerated_supervisor_effect_failure_is_visible(
+def test_actual_dispatch_supervisor_effect_failure_is_visible(
     materialized_dispatch: OwningPayload, area: Path,
     native_recipe_runner: NativeRecipeRunner, native_window_observation: None,
 ) -> None:
     payload, installation, project = materialized_dispatch
     env, adapter, _before, root, diagnostic, command = dispatch_native_setup(materialized_dispatch, area)
-    (adapter / "mode").write_text("supervisor-disable-denied", encoding="utf-8")
+    failure = "supervisor-registration-denied" if os.name == "nt" else "supervisor-disable-denied"
+    (adapter / "mode").write_text(failure, encoding="utf-8")
     operation = native_recipe_runner.run(command, env=env, cwd=project, root=root, diagnostic=diagnostic)
-    assert operation.returncode == 0, diagnostic()
+    assert (operation.returncode != 0) if os.name == "nt" else (operation.returncode == 0), diagnostic()
     result, = _requests(root)
-    assert result.state == "completed" and result.exit_code == 0, diagnostic()
+    assert result.state == "completed"
+    assert result.exit_code is not None
+    assert (result.exit_code != 0) if os.name == "nt" else (result.exit_code == 0), diagnostic()
     log = result.log_path.read_text(errors="replace")
-    assert "supervisor" in log.lower() and "disable" in log.lower(), diagnostic()
+    assert "supervisor" in log.lower(), diagnostic()
     assert "failed" in log.lower() or "denied" in log.lower(), diagnostic()
     effects = [
         json.loads(line) for line in (adapter / "effects.jsonl").read_text(
             encoding="utf-8-sig",
         ).splitlines()
     ]
-    assert any(item["operation"] == "supervisor-disable-denied" for item in effects)
+    assert any(item["operation"] == failure for item in effects)
     if os.name == "nt":
-        task = json.loads((adapter / "agent-dispatch-supervisor.json").read_text(encoding="utf-8-sig"))
-        assert task["State"] != "Running"
+        assert not (adapter / "agent-dispatch-supervisor.json").exists()
     else:
         assert not (adapter / "agent-dispatch-supervisor.service.active").exists() or (
             adapter / "agent-dispatch-supervisor.service.active"
